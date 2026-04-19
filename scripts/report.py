@@ -57,9 +57,12 @@ def generate_reports(
     exports_dir.mkdir(parents=True, exist_ok=True)
 
     results = run_queries(db_path=db_path, exports_dir=exports_dir)
+    total_patents_sql = "SELECT COUNT(*) AS total_patents FROM patents"
 
     with sqlite3.connect(db_path) as conn:
-        total_patents = int(pd.read_sql_query("SELECT COUNT(*) AS total_patents FROM patents", conn)["total_patents"].iloc[0])
+        total_patents = int(
+            pd.read_sql_query(total_patents_sql, conn)["total_patents"].iloc[0]
+        )
 
     top_inventors = results["q1_top_inventors"].head(3)
     top_companies = results["q2_top_companies"].head(3)

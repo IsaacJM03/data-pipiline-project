@@ -112,12 +112,12 @@ def map_relevant_columns(df: pd.DataFrame) -> pd.DataFrame:
     normalized_columns = {col: snake_case(col) for col in df.columns}
     df = df.rename(columns=normalized_columns)
 
-    selected = {}
+    selected = pd.DataFrame(index=df.index)
     for canonical_name, aliases in RELEVANT_FIELDS.items():
         match = next((alias for alias in aliases if alias in df.columns), None)
-        selected[canonical_name] = df[match] if match else pd.Series([pd.NA] * len(df), index=df.index)
+        selected[canonical_name] = df.get(match, pd.NA)
 
-    return pd.DataFrame(selected)
+    return selected
 
 
 def extract_from_file(file_path: Path) -> pd.DataFrame:
