@@ -2,6 +2,10 @@
 
 This project provides a complete, reproducible Python data pipeline for patent analytics using USPTO PatentsView-style data.
 
+Official granted patent disambiguated source:
+- https://data.uspto.gov/bulkdata/datasets/pvgpatdis?fileDataFromDate=1976-01-01&fileDataToDate=2025-09-30
+- Use the accompanying `PV_grant_data_dictionary.pdf` on that page to map raw columns when preparing inputs.
+
 ## Architecture
 
 The pipeline follows an ETL + analytics flow:
@@ -10,6 +14,7 @@ The pipeline follows an ETL + analytics flow:
    - Reads raw patent CSV/TSV files from `data/raw/`
    - Keeps relevant fields only:
      - `patent_id`, `title`, `abstract`, `filing_date`
+     - `classification`
      - `inventor_id`, `name`, `country`
      - `assignee_id`, `company_name`
    - Writes `data/processed/extracted_patent_records.csv`
@@ -28,7 +33,7 @@ The pipeline follows an ETL + analytics flow:
 
 3. **Load** (`scripts/load.py`)
    - Creates SQLite schema from `sql/schema.sql`
-   - Loads cleaned tables into `data/patent_analytics.db`
+   - Loads cleaned tables into `data/patent_analytics.db` (including patent classification in `patents`)
 
 4. **Query** (`scripts/queries.py` + `sql/queries.sql`)
    - Runs analytical SQL queries (top inventors/companies/countries, trend, joins, CTE, ranking)

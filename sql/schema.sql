@@ -10,7 +10,8 @@ CREATE TABLE patents (
     title TEXT NOT NULL,
     abstract TEXT,
     filing_date TEXT NOT NULL,
-    year INTEGER NOT NULL
+    year INTEGER NOT NULL,
+    classification TEXT
 );
 
 CREATE TABLE inventors (

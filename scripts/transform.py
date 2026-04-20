@@ -34,7 +34,7 @@ def clean_base_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df.dropna(subset=["patent_id", "inventor_id", "assignee_id", "filing_date"])
 
-    string_columns = ["title", "abstract", "name", "country", "company_name"]
+    string_columns = ["title", "abstract", "classification", "name", "country", "company_name"]
     for col in string_columns:
         if col in df.columns:
             df[col] = df[col].fillna("Unknown").astype(str).str.strip()
@@ -49,7 +49,7 @@ def clean_base_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 def split_tables(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
     """Split cleaned frame into normalized target tables."""
     patents = (
-        df[["patent_id", "title", "abstract", "filing_date", "year"]]
+        df[["patent_id", "title", "abstract", "filing_date", "year", "classification"]]
         .drop_duplicates(subset=["patent_id"])
         .sort_values("patent_id")
         .reset_index(drop=True)
