@@ -12,6 +12,7 @@ The pipeline follows an ETL + analytics flow:
 
 1. **Extract** (`scripts/extract.py`)
    - Reads raw patent CSV/TSV files from `data/raw/`
+   - If `data/raw/` is empty, attempts to pull source files directly from the official PatentsView granted dataset page and unpacks downloaded ZIP archives
    - Keeps relevant fields only:
      - `patent_id`, `title`, `abstract`, `filing_date`
      - `classification`
@@ -87,6 +88,11 @@ pip install -r requirements.txt
 ```bash
 python main.py
 ```
+
+Optional extract controls:
+- `PATENTSVIEW_AUTO_DOWNLOAD=1` (default): enable pull from the official PatentsView dataset page when `data/raw/` is empty
+- `PATENTSVIEW_AUTO_DOWNLOAD=0`: disable network pull and use deterministic sample fallback when no local raw files exist
+- `PATENTSVIEW_MAX_DOWNLOAD_FILES=8` (default): cap number of source files downloaded from the dataset page
 
 After completion:
 - SQLite DB: `data/patent_analytics.db`

@@ -2,14 +2,26 @@
 
 from __future__ import annotations
 
+from html import unescape
+import os
 from pathlib import Path
 import re
+import shutil
 from typing import Iterable
+from urllib.parse import urljoin, urlsplit
+from urllib.request import urlopen
+import zipfile
 
 import pandas as pd
 
 DEFAULT_RAW_DIR = Path("data/raw")
 DEFAULT_OUTPUT_FILE = Path("data/processed/extracted_patent_records.csv")
+PATENTSVIEW_DATASET_URL = (
+    "https://data.uspto.gov/bulkdata/datasets/pvgpatdis"
+    "?fileDataFromDate=1976-01-01&fileDataToDate=2025-09-30"
+)
+PATENTSVIEW_AUTO_DOWNLOAD_ENV = "PATENTSVIEW_AUTO_DOWNLOAD"
+PATENTSVIEW_MAX_DOWNLOAD_FILES_ENV = "PATENTSVIEW_MAX_DOWNLOAD_FILES"
 
 RELEVANT_FIELDS = {
     "patent_id": ["patent_id", "patent", "id"],
@@ -98,9 +110,13 @@ def detect_separator(file_path: Path) -> str:
 
 
 def ensure_raw_data(raw_dir: Path) -> None:
-    """Create deterministic sample raw data when no source files exist."""
+    """Populate raw folder from PatentsView dataset page, then fallback to sample data."""
     raw_dir.mkdir(parents=True, exist_ok=True)
     if any(raw_dir.glob("*.csv")) or any(raw_dir.glob("*.tsv")):
+        return
+
+    auto_download = os.getenv(PATENTSVIEW_AUTO_DOWNLOAD_ENV, "1").lower() not in {"0", "false", "no"}
+    if auto_download and pull_patentsview_data(raw_dir):
         return
 
     sample_file = raw_dir / "sample_patents.csv"
@@ -129,6 +145,78 @@ def map_relevant_columns(df: pd.DataFrame) -> pd.DataFrame:
         selected[canonical_name] = df.get(match, pd.NA)
 
     return selected
+
+
+def discover_patentsview_file_links(dataset_url: str) -> list[str]:
+    """Collect downloadable file links from the PatentsView dataset page."""
+    with urlopen(dataset_url, timeout=45) as response:
+        html = response.read().decode("utf-8", errors="ignore")
+
+    candidates = re.findall(r"""href=["']([^"']+)["']""", html, flags=re.IGNORECASE)
+    discovered = []
+    for href in candidates:
+        absolute_link = urljoin(dataset_url, unescape(href.strip()))
+        link_path = urlsplit(absolute_link).path.lower()
+        if link_path.endswith((".zip", ".csv", ".tsv", ".txt")):
+            discovered.append(absolute_link)
+
+    return sorted(set(discovered))
+
+
+def select_patentsview_links(links: list[str], limit: int) -> list[str]:
+    """Pick file links likely to contain required patent analytics entities."""
+    required_keywords = (
+        "patent",
+        "abstract",
+        "inventor",
+        "assignee",
+        "organization",
+        "classification",
+        "cpc",
+        "uspc",
+    )
+    prioritized = [link for link in links if any(keyword in link.lower() for keyword in required_keywords)]
+    selected = prioritized or links
+    return selected[:limit]
+
+
+def download_url_to_path(url: str, target_path: Path) -> None:
+    """Download a URL to disk."""
+    with urlopen(url, timeout=120) as response:
+        with target_path.open("wb") as handle:
+            shutil.copyfileobj(response, handle)
+
+
+def unpack_zip_files(raw_dir: Path) -> None:
+    """Extract all zip archives in the raw directory."""
+    for archive in raw_dir.glob("*.zip"):
+        with zipfile.ZipFile(archive) as zipped:
+            zipped.extractall(raw_dir)
+
+
+def pull_patentsview_data(raw_dir: Path) -> bool:
+    """Try pulling source files from the official PatentsView granted dataset page."""
+    try:
+        max_files = int(os.getenv(PATENTSVIEW_MAX_DOWNLOAD_FILES_ENV, "8"))
+    except ValueError:
+        max_files = 8
+    max_files = max(1, max_files)
+
+    try:
+        links = discover_patentsview_file_links(PATENTSVIEW_DATASET_URL)
+        if not links:
+            return False
+
+        selected_links = select_patentsview_links(links, max_files)
+        for file_url in selected_links:
+            file_name = Path(urlsplit(file_url).path).name
+            target = raw_dir / file_name
+            download_url_to_path(file_url, target)
+        unpack_zip_files(raw_dir)
+    except Exception:
+        return False
+
+    return any(raw_dir.glob("*.csv")) or any(raw_dir.glob("*.tsv")) or any(raw_dir.glob("*.txt"))
 
 
 def extract_from_file(file_path: Path) -> pd.DataFrame:
