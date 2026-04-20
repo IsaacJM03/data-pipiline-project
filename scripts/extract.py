@@ -213,7 +213,8 @@ def pull_patentsview_data(raw_dir: Path) -> bool:
             target = raw_dir / file_name
             download_url_to_path(file_url, target)
         unpack_zip_files(raw_dir)
-    except Exception:
+    except Exception as exc:
+        print(f"Warning: Failed to pull PatentsView data from source ({exc}). Falling back to sample data.")
         return False
 
     return any(raw_dir.glob("*.csv")) or any(raw_dir.glob("*.tsv")) or any(raw_dir.glob("*.txt"))
