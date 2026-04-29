@@ -1,0 +1,17 @@
+[1/4] Building streaming patent tables...
+Generated transformed files: data/processed/clean_patents.csv, data/processed/clean_inventors.csv, data/processed/clean_companies.csv, data/processed/clean_relationships.csv
+[2/4] Loading tables into SQLite...
+Traceback (most recent call last):
+  File "/Users/mac/Projects/Maarifasasa/data-pipiline-project/main.py", line 31, in <module>
+    transformed_paths = EXPECTED_CSVS
+    ^^^^^^^^^^
+  File "/Users/mac/Projects/Maarifasasa/data-pipiline-project/main.py", line 18, in run_pipeline
+    "relationships": PROCESSED_DIR / "clean_relationships.csv",
+              ^^^^^^^^^^
+  File "/Users/mac/Projects/Maarifasasa/data-pipiline-project/scripts/load.py", line 81, in run_load
+    load_table(conn, table, processed_dir / file_name)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mac/Projects/Maarifasasa/data-pipiline-project/scripts/load.py", line 52, in load_table
+    connection.executemany(insert_stmt, rows_as_tuples)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: near "5745288": syntax error

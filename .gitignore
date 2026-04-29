@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+
+# Runtime pipeline artifacts
+data/patent_analytics.db
+data/processed/*.csv
+outputs/exports/*.csv
+outputs/reports/*.json
+outputs/reports/*.png
+
+# Optional local raw input dumps
+# Keep directory structure with .gitkeep only
+data/raw/*.csv
+data/raw/*.tsv
+data/raw/*.txt
+*.zip
+*.claude/
+.vscode/settings.json
+.DS_Store
