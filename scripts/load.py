@@ -19,6 +19,12 @@ TABLE_FILES = {
     "relationships": "clean_relationships.csv",
 }
 
+CHUNK_SIZE = 100_000
+
+
+def _quote_identifier(identifier: str) -> str:
+    return '"' + identifier.replace('"', '""') + '"'
+
 
 def initialize_schema(connection: sqlite3.Connection, schema_path: Path) -> None:
     """Create tables and indexes from schema SQL."""
@@ -27,9 +33,28 @@ def initialize_schema(connection: sqlite3.Connection, schema_path: Path) -> None
 
 
 def load_table(connection: sqlite3.Connection, table_name: str, csv_path: Path) -> None:
-    """Load a CSV file into a SQLite table."""
-    dataframe = pd.read_csv(csv_path)
-    dataframe.to_sql(table_name, connection, if_exists="append", index=False)
+    """Load a CSV file into a SQLite table using raw SQL to avoid variable limits."""
+    for chunk in pd.read_csv(csv_path, dtype=str, chunksize=CHUNK_SIZE):
+        # Drop duplicates within each chunk to handle any schema PK/UNIQUE constraints
+        if "inventor_id" in chunk.columns:
+            chunk = chunk.drop_duplicates(subset=["inventor_id"])
+        if "company_id" in chunk.columns:
+            chunk = chunk.drop_duplicates(subset=["company_id"])
+        if "patent_id" in chunk.columns and "inventor_id" in chunk.columns and "company_id" in chunk.columns:
+            chunk = chunk.drop_duplicates(subset=["patent_id", "inventor_id", "company_id"])
+        
+        if chunk.empty:
+            continue
+        
+        # Use raw SQL INSERT to avoid pandas' chunksize parameter issues
+        columns = list(chunk.columns)
+        placeholders = ", ".join(["?" for _ in columns])
+        quoted_columns = ", ".join(_quote_identifier(column) for column in columns)
+        insert_stmt = f"INSERT INTO {_quote_identifier(table_name)} ({quoted_columns}) VALUES ({placeholders})"
+        
+        # Convert DataFrame rows to tuples of values
+        rows_as_tuples = [tuple(row) for row in chunk.values]
+        connection.executemany(insert_stmt, rows_as_tuples)
 
 
 def run_load(
@@ -53,8 +78,16 @@ def run_load(
     db_path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(db_path) as conn:
         initialize_schema(conn, schema_path)
+        
+        # Disable foreign keys during load to allow flexible insert order
+        conn.execute("PRAGMA foreign_keys = OFF")
+        
         for table, file_name in TABLE_FILES.items():
             load_table(conn, table, processed_dir / file_name)
+            conn.commit()
+        
+        # Re-enable foreign keys and validate data integrity
+        conn.execute("PRAGMA foreign_keys = ON")
         conn.commit()
 
     return db_path

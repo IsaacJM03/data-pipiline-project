@@ -7,12 +7,13 @@ import os
 from pathlib import Path
 import re
 import shutil
-from typing import Iterable
+import subprocess
+from typing import TYPE_CHECKING, Iterable
 from urllib.parse import urljoin, urlsplit
-from urllib.request import urlopen
 import zipfile
 
-import pandas as pd
+if TYPE_CHECKING:
+    import pandas as pd
 
 DEFAULT_RAW_DIR = Path("data/raw")
 DEFAULT_OUTPUT_FILE = Path("data/processed/extracted_patent_records.csv")
@@ -111,6 +112,8 @@ def detect_separator(file_path: Path) -> str:
 
 def ensure_raw_data(raw_dir: Path) -> None:
     """Populate raw folder from PatentsView dataset page, then fallback to sample data."""
+    import pandas as pd
+
     raw_dir.mkdir(parents=True, exist_ok=True)
     if any(raw_dir.glob("*.csv")) or any(raw_dir.glob("*.tsv")):
         return
@@ -136,6 +139,8 @@ def list_raw_files(raw_dir: Path) -> Iterable[Path]:
 
 def map_relevant_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Select and standardize only relevant fields from the raw input."""
+    import pandas as pd
+
     normalized_columns = {col: snake_case(col) for col in df.columns}
     df = df.rename(columns=normalized_columns)
 
@@ -148,43 +153,63 @@ def map_relevant_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def discover_patentsview_file_links(dataset_url: str) -> list[str]:
-    """Collect downloadable file links from the PatentsView dataset page."""
-    with urlopen(dataset_url, timeout=45) as response:
-        html = response.read().decode("utf-8", errors="ignore")
+    """Collect downloadable ZIP file links from the PatentsView dataset page."""
+    html = fetch_page_with_cli(dataset_url)
 
-    candidates = re.findall(r"""href=["']([^"']+)["']""", html, flags=re.IGNORECASE)
+    href_candidates = re.findall(r"""href=["']([^"']+)["']""", html, flags=re.IGNORECASE)
+    text_candidates = re.findall(r"""https?://[^"'\s<>]+\.zip(?:\?[^"'\s<>]*)?""", html, flags=re.IGNORECASE)
+    relative_candidates = re.findall(r"""/[^"'\s<>]+\.zip(?:\?[^"'\s<>]*)?""", html, flags=re.IGNORECASE)
+
     discovered = []
-    for href in candidates:
-        absolute_link = urljoin(dataset_url, unescape(href.strip()))
+    for candidate in [*href_candidates, *text_candidates, *relative_candidates]:
+        absolute_link = urljoin(dataset_url, unescape(candidate.strip()))
         link_path = urlsplit(absolute_link).path.lower()
-        if link_path.endswith((".zip", ".csv", ".tsv", ".txt")):
+        if link_path.endswith(".zip"):
             discovered.append(absolute_link)
 
     return sorted(set(discovered))
 
 
-def select_patentsview_links(links: list[str], limit: int) -> list[str]:
-    """Pick file links likely to contain required patent analytics entities."""
-    required_keywords = (
-        "patent",
-        "abstract",
-        "inventor",
-        "assignee",
-        "organization",
-        "classification",
-        "cpc",
-        "uspc",
+def _run_command(command: list[str], timeout_seconds: int = 180) -> str:
+    """Run a subprocess command and return stdout as text."""
+    result = subprocess.run(
+        command,
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=timeout_seconds,
     )
-    prioritized = [link for link in links if any(keyword in link.lower() for keyword in required_keywords)]
-    selected = prioritized or links
-    return selected[:limit]
+    return result.stdout
+
+
+def fetch_page_with_cli(url: str) -> str:
+    """Fetch HTML via curl/wget, preferring curl when available."""
+    if shutil.which("curl"):
+        return _run_command(["curl", "-fsSL", "-L", url], timeout_seconds=120)
+    if shutil.which("wget"):
+        return _run_command(["wget", "-qO-", url], timeout_seconds=120)
+    raise RuntimeError("Neither curl nor wget is available on PATH.")
 
 
 def download_url_to_path(url: str, target_path: Path) -> None:
-    """Download a URL to disk."""
-    with urlopen(url, timeout=120) as response:
-        with target_path.open("wb") as handle:
-            shutil.copyfileobj(response, handle)
+    """Download a URL to disk via curl/wget."""
+    if shutil.which("curl"):
+        subprocess.run(
+            ["curl", "-fL", "--retry", "3", "-o", str(target_path), url],
+            check=True,
+            timeout=300,
+        )
+        return
+
+    if shutil.which("wget"):
+        subprocess.run(
+            ["wget", "-q", "-O", str(target_path), url],
+            check=True,
+            timeout=300,
+        )
+        return
+
+    raise RuntimeError("Neither curl nor wget is available on PATH.")
 
 
 def unpack_zip_files(raw_dir: Path) -> None:
@@ -207,7 +232,7 @@ def pull_patentsview_data(raw_dir: Path) -> bool:
         if not links:
             return False
 
-        selected_links = select_patentsview_links(links, max_files)
+        selected_links = links if max_files <= 0 else links[:max_files]
         for file_url in selected_links:
             file_name = Path(urlsplit(file_url).path).name
             target = raw_dir / file_name
@@ -222,8 +247,20 @@ def pull_patentsview_data(raw_dir: Path) -> bool:
 
 def extract_from_file(file_path: Path) -> pd.DataFrame:
     """Extract relevant patent attributes from one file."""
+    import pandas as pd
+
     sep = detect_separator(file_path)
-    raw_df = pd.read_csv(file_path, sep=sep, dtype=str)
+    try:
+        # Try standard read first
+        raw_df = pd.read_csv(file_path, sep=sep, dtype=str)
+    except pd.errors.ParserError:
+        # If parsing fails, skip problematic lines
+        print(f"⚠️  Parsing error in {file_path.name}, skipping malformed rows...")
+        raw_df = pd.read_csv(file_path, sep=sep, dtype=str, on_bad_lines='skip', engine='python')
+    
+    if len(raw_df) == 0:
+        return pd.DataFrame()  # Return empty dataframe if no rows extracted
+    
     extracted_df = map_relevant_columns(raw_df)
     extracted_df["source_file"] = file_path.name
     return extracted_df
@@ -231,6 +268,8 @@ def extract_from_file(file_path: Path) -> pd.DataFrame:
 
 def run_extraction(raw_dir: Path = DEFAULT_RAW_DIR, output_file: Path = DEFAULT_OUTPUT_FILE) -> Path:
     """Run extraction from all available raw files and persist unified extracted data."""
+    import pandas as pd
+
     raw_dir = Path(raw_dir)
     output_file = Path(output_file)
 
@@ -240,11 +279,27 @@ def run_extraction(raw_dir: Path = DEFAULT_RAW_DIR, output_file: Path = DEFAULT_
     if not files:
         raise FileNotFoundError(f"No raw input files found in {raw_dir}.")
 
-    extracted_frames = [extract_from_file(path) for path in files]
+    extracted_frames = []
+    for path in files:
+        print(f"  Extracting {path.name}...", end=" ")
+        try:
+            df = extract_from_file(path)
+            if len(df) > 0:
+                extracted_frames.append(df)
+                print(f"✓ ({len(df)} rows)")
+            else:
+                print("⊘ (skipped - no valid rows)")
+        except Exception as exc:
+            print(f"✗ ({exc})")
+    
+    if not extracted_frames:
+        raise ValueError("No data could be extracted from any files.")
+    
     extracted = pd.concat(extracted_frames, ignore_index=True)
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
     extracted.to_csv(output_file, index=False)
+    print(f"✓ Saved {len(extracted)} extracted records")
     return output_file
 
 

@@ -12,7 +12,7 @@ The pipeline follows an ETL + analytics flow:
 
 1. **Extract** (`scripts/extract.py`)
    - Reads raw patent CSV/TSV files from `data/raw/`
-   - If `data/raw/` is empty, attempts to pull source files directly from the official PatentsView granted dataset page and unpacks downloaded ZIP archives
+   - If `data/raw/` is empty, runs `curl`/`wget` against the official PatentsView granted dataset page, collects all ZIP links, downloads them, and unpacks archives
    - Keeps relevant fields only:
      - `patent_id`, `title`, `abstract`, `filing_date`
      - `classification`
@@ -89,10 +89,32 @@ pip install -r requirements.txt
 python main.py
 ```
 
+## Scrape USPTO ZIP Files First (Optional)
+
+Run the standalone scraper to call the USPTO metadata API, extract ZIP download URLs, and download files into `data/raw/uspto/`:
+
+```bash
+python scripts/scrape_uspto.py
+```
+
+Useful flags:
+- `--dry-run`: only list discovered ZIP files (no download)
+- `--name-pattern patent`: only include matching file names
+- `--output-dir data/raw/uspto`: change download location
+- `--force`: re-download even if file already exists
+- `--no-resume`: disable partial-download resume
+- `--from-date YYYY-MM-DD --to-date YYYY-MM-DD`: configurable metadata date range
+- `--max-workers 5`: concurrent download workers
+- `--header "Key: Value"`: send extra request headers (repeatable)
+- `--metadata-file path/to/metadata.json`: use local metadata JSON instead of API call
+
+The downloader includes retries with exponential backoff, per-file progress bars, streaming downloads, file-size validation, and request throttling.
+
 Optional extract controls:
 - `PATENTSVIEW_AUTO_DOWNLOAD=1` (default): enable pull from the official PatentsView dataset page when `data/raw/` is empty
 - `PATENTSVIEW_AUTO_DOWNLOAD=0`: disable network pull and use deterministic sample fallback when no local raw files exist
-- `PATENTSVIEW_MAX_DOWNLOAD_FILES=8` (default): cap number of source files downloaded from the dataset page
+- `PATENTSVIEW_MAX_DOWNLOAD_FILES=8` (default): cap number of ZIP files downloaded from the dataset page
+- `PATENTSVIEW_MAX_DOWNLOAD_FILES=0`: download all discovered ZIP files from the dataset page
 
 After completion:
 - SQLite DB: `data/patent_analytics.db`

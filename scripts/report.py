@@ -30,6 +30,14 @@ def generate_visualizations(results: dict[str, pd.DataFrame], reports_dir: Path)
     if trend_df.empty:
         return chart_path
 
+    # Ensure year is numeric and handle any indexing issues
+    trend_df = trend_df.reset_index(drop=True)
+    trend_df["year"] = pd.to_numeric(trend_df["year"], errors="coerce")
+    trend_df = trend_df.dropna(subset=["year"])
+    
+    if trend_df.empty:
+        return chart_path
+
     fig, ax = plt.subplots(figsize=(8, 4.5))
     ax.plot(trend_df["year"], trend_df["patent_count"], marker="o")
     ax.set_title("Patents per Year")

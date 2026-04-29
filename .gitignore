@@ -13,3 +13,7 @@ outputs/reports/*.png
 data/raw/*.csv
 data/raw/*.tsv
 data/raw/*.txt
+*.zip
+*.claude/
+.vscode/settings.json
+.DS_Store
