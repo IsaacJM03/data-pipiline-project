@@ -1,0 +1,5 @@
+patent_id,title,abstract,filing_date,classification,inventor_id,name,country,assignee_id,company_name
+US1000001,Battery cooling optimization,System and method for electric battery thermal regulation.,2018-04-10,H01M10/0525,INV001,Alicia Gomez,US,CMP001,Voltix Labs
+US1000002,AI scheduling for manufacturing,Machine learning model to optimize factory throughput.,2019-06-22,G06Q10/06,INV002,Kenji Tanaka,JP,CMP002,NexFab Systems
+US1000003,Low-latency network routing,Adaptive path computation for reduced network latency.,2020-02-15,H04L45/00,INV001,Alicia Gomez,US,CMP001,Voltix Labs
+US1000004,Genome pattern detection,Parallel algorithm for gene sequence anomaly detection.,2021-11-03,C12Q1/6869,INV003,Sofia Martins,BR,CMP003,BioNova Analytics

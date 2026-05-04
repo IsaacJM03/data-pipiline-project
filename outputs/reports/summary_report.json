@@ -1,0 +1,46 @@
+{
+  "total_patents": 5000,
+  "top_inventors": [
+    {
+      "inventor_id": "fl:ar_ln:judzis-1",
+      "name": "Arvids Judzis",
+      "country": null,
+      "patent_count": 1
+    },
+    {
+      "inventor_id": "fl:to_ln:ogata-29",
+      "name": "Toshifumi Ogata",
+      "country": null,
+      "patent_count": 1
+    },
+    {
+      "inventor_id": "fl:yi_ln:zhang-139",
+      "name": "Yin Zhang",
+      "country": null,
+      "patent_count": 1
+    }
+  ],
+  "top_companies": [
+    {
+      "company_id": "org_Cm4tbqntr5mVzlKtZPuE",
+      "name": "org_Cm4tbqntr5mVzlKtZPuE",
+      "patent_count": 1
+    },
+    {
+      "company_id": "org_mtRTVDEdo0lNlOp0GcwZ",
+      "name": "org_mtRTVDEdo0lNlOp0GcwZ",
+      "patent_count": 1
+    },
+    {
+      "company_id": "org_xlNWqmrnphnhzaJwiIFe",
+      "name": "org_xlNWqmrnphnhzaJwiIFe",
+      "patent_count": 1
+    }
+  ],
+  "top_countries": [
+    {
+      "country": null,
+      "patent_count": 3
+    }
+  ]
+}
