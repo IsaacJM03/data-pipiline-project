@@ -1,37 +1,273 @@
 inventor_id,name,country,patent_count
-fl:ak_ln:tsuruoka-1,Akihiko Tsuruoka,JPX,1
-fl:ak_ln:maekawa-5,Akinori Maekawa,JPX,1
+fl:ak_ln:kabasawa-3,Akihiko Kabasawa,JP,1
+fl:ak_ln:tsuruoka-1,Akihiko Tsuruoka,JP,1
+fl:ak_ln:maekawa-5,Akinori Maekawa,JP,1
+fl:al_ln:rodero-1,Alejandro Rodero,US,1
+fl:al_ln:calderoni-1,Alessandro Calderoni,US,1
+fl:al_ln:sassi-3,Alexander Sassi,US,1
 fl:al_ln:hedinger-2,Alfred Hedinger,,1
+fl:al_ln:rubenstein-5,Allen I. Rubenstein,US,1
 fl:am_ln:alali-7,Ammar Al-Ali,US,1
+fl:am_ln:patil-11,Amrita Patil,IN,1
+fl:an_ln:kanduluru-1,Ananda Kumar Kanduluru,US,1
 fl:an_ln:kienzle-1,Andreas Kienzle,DE,1
+fl:an_ln:seeley-1,Andrew James Seeley,GB,1
+fl:an_ln:rinaldi-7,"Anthony Rinaldi, Jr.",US,1
+fl:ar_ln:follestad-3,Arild Follestad,NO,1
 fl:ar_ln:judzis-1,Arvids Judzis,US,1
+fl:br_ln:moretti-1,BRIANA J. MORETTI,US,1
 fl:ba_ln:zhao-3,Bao-Ping Zhao,US,1
+fl:ba_ln:rand-1,Barry Rand,US,1
+fl:be_ln:kim-18,Beom Sik Kim,KR,1
+fl:be_ln:hochwald-1,Bertrand Hochwald,US,1
+fl:bi_ln:xiang-7,Bin Xiang,US,1
+fl:bi_ln:wu-94,Bing Wu,CN,1
+fl:br_ln:elliott-29,Brent Elliott,US,1
+fl:br_ln:davis-7,Bryan Terence Davis,GB,1
+fl:by_ln:han-67,Byung Joon Han,KR,1
+fl:ca_ln:myerholtz-1,Carl A. Myerholtz,US,1
+fl:ca_ln:phillips-22,Cary Phillips,US,1
+fl:ce_ln:barrett-1,Cecil Barrett,US,1
+fl:ch_ln:liang-194,Chen-Wei Liang,,1
+fl:ch_ln:chan-47,Chien-Ting Chan,TW,1
+fl:ch_ln:cho-131,Ching-Hsin Cho,TW,1
+fl:ch_ln:huang-341,Chun-Kai Huang,TW,1
+fl:ch_ln:luo-105,Chung-Chih Luo,TW,1
+fl:co_ln:piepgras-1,Colin Piepgras,US,1
+fl:co_ln:peter-1,Cornelius Peter,DE,1
+fl:da_ln:komatsubara-1,Daisuke Komatsubara,JP,1
+fl:da_ln:freeman-32,Dan W. Freeman,US,1
+fl:da_ln:kelly-1,Dana R. Kelly,US,1
 fl:da_ln:meyer-50,Daniel Meyer,US,1
+fl:da_ln:grant-37,Danny A. Grant,US,1
+fl:da_ln:lazovsky-1,David E. Lazovsky,US,1
+fl:da_ln:ross-34,David Justin Ross,US,1
+fl:da_ln:roberts-54,David Roberts,US,1
+fl:de_ln:hulbert-1,Dennis Hulbert,US,1
+fl:de_ln:ning-7,Dezhi Ning,CN,1
+fl:di_ln:brehob-1,Diana Brehob,US,1
 fl:do_ln:kim-296,Dong Jin Kim,KR,1
+fl:do_ln:kang-21,Dong Min KANG,KR,1
 fl:du_ln:moon-7,Duck Su Moon,KR,1
+fl:eb_ln:rulf-1,Eberhard Rulf,DE,1
+fl:ei_ln:iwamura-1,Eiji Iwamura,JP,1
+fl:en_ln:hou-1,Enxing HOU,CN,1
+fl:er_ln:scheithauer-1,Eric A. Scheithauer,US,1
+fl:er_ln:hell-1,Erich Hell,DE,1
+fl:er_ln:detert-1,Ernst-Rolf Detert,DE,1
+fl:fi_ln:crowe-1,Fidelma Crowe,US,1
+fl:fl_ln:rothkopf-1,Fletcher R. Rothkopf,US,1
+fl:fr_ln:yarger-1,Frank A. Yarger,US,1
+fl:fr_ln:lark-1,Frederick W. Lark,US,1
+fl:ga_ln:goldstein-1,Gabriel Goldstein,US,1
+fl:ga_ln:watt-1,Gareth F. Watt,US,1
 fl:ga_ln:cotton-3,Gary W. Cotton,,1
+fl:ga_ln:khanduri-1,Gaurav Khanduri,AU,1
 fl:ga_ln:sherry-1,Gavin Sherry,US,1
-fl:ge_ln:jensen-2,Georg W. Jensen,DKX,1
-fl:gr_ln:meyer-8,Gregory S. Meyer,US,1
+fl:ge_ln:jensen-2,Georg W. Jensen,DK,1
+fl:gi_ln:barletta-1,Giacomo Barletta,IT,1
+fl:gi_ln:brown-2,Gilbert Brown,,1
+fl:gi_ln:reimann-1,Gina Reimann,US,1
+fl:gu_ln:wang-219,Guangtao Wang,US,1
+fl:gu_ln:kaupp-2,Günter Kaupp,DE,1
+fl:ha_ln:krueger-1,Hans Krueger,DE,1
+fl:ha_ln:rudolph-3,Hans Rudolph,DE,1
+01as0bxvz97ekrsk41a8xfccq,Hans-Jurgen Hantke,DE,1
+fl:ha_ln:hanley-1,Harold G. Hanley,US,1
+fl:ha_ln:hassan-2,Hazimah Abu Hassan,,1
+fl:he_ln:agnew-1,Heather Dawn Agnew,US,1
+fl:he_ln:breedveld-1,Hendrik G. Breedveld,NL,1
+fl:he_ln:blauvelt-1,Henry A. Blauvelt,US,1
+fl:he_ln:gropp-3,Henry Gropp,DE,1
+fl:hi_ln:nagase-14,Hidenobu Nagase,JP,1
+fl:hi_ln:tran-9,Hieu Vinh Tran,US,1
+fl:hi_ln:ikeda-60,Hiroaki Ikeda,JP,1
+fl:hi_ln:matsuda-3,Hironari Matsuda,JP,1
+fl:hi_ln:ito-84,Hironori Ito,JP,1
+fl:hi_ln:kimura-57,Hiroshi Kimura,JP,1
+fl:hi_ln:shiku-2,Hiroshi Shiku,CM,1
+fl:hi_ln:fukushima-35,Hirotaka Fukushima,JP,1
+fl:hs_ln:lee-149,Hsien-Che Lee,US,1
 fl:hu_ln:katus-1,Hugo Katus,DE,1
+fl:hy_ln:ra-3,Hyonwook Ra,KR,1
+fl:hy_ln:lee-963,Hyunho Lee,KR,1
+fl:ig_ln:sotosek-1,Igor Sotosek,SI,1
+fl:il_ln:buryak-1,Ilya Buryak,RU,1
+fl:in_ln:siebeking-1,Ingo Siebeking,DE,1
+fl:is_ln:kondo-1,Isao Kondo,JP,1
+fl:ja_ln:behm-3,James Behm,US,1
+fl:ja_ln:fredenberg-1,James D. Fredenberg,US,1
+fl:ja_ln:hawkes-4,James G. Hawkes,US,1
+fl:ja_ln:quick-2,James R. Quick,US,1
+fl:ja_ln:besehanic-1,Jan Besehanic,US,1
+fl:ja_ln:peper-1,Janet Peper,DE,1
+fl:ja_ln:ogdahl-1,Jason W. Ogdahl,US,1
+fl:je_ln:collins-22,Jeffrey Collins,,1
+fl:je_ln:lewis-27,Jeffrey Lewis,US,1
+fl:je_ln:milbrandt-1,Jeffrey Milbrandt,US,1
+fl:je_ln:lim-27,Jeong Mook Lim,KR,1
+fl:ji_ln:lee-561,Ji-Woo Lee,KR,1
+fl:ji_ln:ni-3,Jian Ni,US,1
 fl:ji_ln:wang-689,Jian Wang,CN,1
+fl:ji_ln:johnston-2,Jim W. Johnston,,1
+fl:jo_ln:bucher-6,John C. Bucher,US,1
+fl:jo_ln:tsai-13,John J. Tsai,US,1
+fl:jo_ln:brown-45,John R. Brown,AU,1
+fl:jo_ln:clevenger-2,"John W. Clevenger, Jr.",US,1
+fl:jo_ln:jung-40,Jong Jin JUNG,KR,1
+fl:jo_ln:daraabrams-1,Joseph Alexander Dara-Abrams,US,1
+fl:ju_ln:song-60,Jun Ho Song,KR,1
+fl:ju_ln:wang-50,Junli Wang,US,1
+028j3du6osnlncpst2qkb7z7f,Jurriaan Borstlap,NL,1
+fl:ka_ln:yamane-14,Katsuyasu Yamane,JP,1
+fl:ke_ln:yamada-43,Keiji Yamada,JP,1
+fl:ke_ln:beaty-2,Keith D. Beaty,US,1
+fl:ke_ln:rooks-4,Kelsyn D. S. Rooks,US,1
+fl:ke_ln:wollborg-1,Kenan Wollborg,,1
+fl:ke_ln:kobayashi-29,Kenji Kobayashi,JP,1
+fl:ke_ln:gross-11,Kenneth C. Gross,US,1
+fl:ke_ln:bertagnolli-1,Kenneth E. Bertagnolli,US,1
+fl:ke_ln:namba-11,Kenryo Namba,JP,1
+fl:ki_ln:wihinen-1,Kimmo Wihinen,FI,1
+fl:ki_ln:tateishi-5,Kiyoshi Tateishi,JP,1
+fl:ko_ln:sakai-24,Kohji Sakai,JP,1
+fl:ko_ln:hanada-6,Koji Hanada,JP,1
+fl:ko_ln:sagane-1,Koji Sagane,JP,1
+fl:ko_ln:suenami-1,Koji Suenami,JP,1
+fl:ku_ln:watanabe-5,Kunio Watanabe,JP,1
+fl:ku_ln:izawa-2,Kunisuke Izawa,JP,1
+fl:la_ln:byars-1,Larry W. Byars,US,1
+fl:la_ln:berg-16,Lars Fredrik Berg,DE,1
+fl:le_ln:miao-2,Lei Miao,CN,1
+fl:lu_ln:duque-1,Luis Duque,US,1
+fl:ma_ln:talpade-1,Mahesh Talpade,US,1
+fl:ma_ln:kawamura-43,Makoto Kawamura,JP,1
+fl:ma_ln:borca-1,Manuel V. Borca,US,1
+fl:ma_ln:slemp-2,Mark William Slemp,,1
+fl:ma_ln:shinohara-24,Masami Shinohara,JP,1
+fl:ma_ln:yonekura-4,Masatsugu Yonekura,JP,1
+fl:ma_ln:kirchner-14,Matthias Kirchner,DE,1
+fl:me_ln:roosta-1,Mehrdad Roosta,US,1
+fl:me_ln:patel-19,Mehul Patel,US,1
+fl:me_ln:ding-11,Mengjiao Ding,CN,1
+fl:me_ln:li-118,Mengzhen LI,CN,1
+fl:mi_ln:liu-233,Miao LIU,CN,1
+fl:mi_ln:adel-4,Michael Adel,IL,1
+fl:mi_ln:neering-1,Michael J. Neering,US,1
+fl:mi_ln:kuehn-5,Michael Kuehn,DE,1
+fl:na_ln:ayata-1,Naoki Ayata,JP,1
 fl:ne_ln:alexander-2,Nelson Alexander,,1
 fl:ni_ln:grater-1,Nicholas Gräter,DE,1
+fl:ni_ln:lin-6,Nien-Hsun Lin,,1
+fl:no_ln:kitamura-9,Nobuyuki Kitamura,JP,1
+fl:no_ln:shibata-10,Nobuyuki Shibata,JP,1
+fl:no_ln:sidebotham-1,Norman C. Sidebotham,US,1
+fl:pa_ln:funes-1,Pablo Funes,US,1
+fl:pa_ln:perret-2,Patrice Perret,FR,1
+fl:pe_ln:navarroalvarez-1,Pedro Jose Navarro Alvarez,CH,1
+fl:pe_ln:gomez-1,Peter Gomez,SE,1
+fl:pe_ln:gstach-1,Peter Gstach,AT,1
+fl:pe_ln:pacnik-1,Peter Pacnik,AT,1
 fl:pe_ln:rieckhoff-1,Peter Rieckhoff,DE,1
 fl:pe_ln:smith-41,Peter Smith,US,1
+fl:ph_ln:warren-2,Philip C. Warren,,1
+fl:ph_ln:patten-2,Phillip A. Patten,US,1
+fl:pi_ln:chang-4,Pi-Shun Chang,,1
+fl:pi_ln:du-3,Ping Du,US,1
+fl:po_ln:tseng-24,Po-Sen Tseng,TW,1
+fl:ra_ln:sudarsanam-1,Raj Ashok Sudarsanam,US,1
+fl:ra_ln:thompson-17,Raymond George Thompson,US,1
+fl:ra_ln:kastanek-1,Raymond S. Kastanek,US,1
+fl:re_ln:schulman-1,Rebecca B. Schulman,US,1
+fl:re_ln:townsend-2,Reed L. Townsend,US,1
+fl:ri_ln:ruiz-2,Ricardo Antonio Ruiz,US,1
 fl:ri_ln:broglie-1,Richard Broglie,US,1
 fl:ri_ln:conrad-5,Richard Conrad,US,1
+fl:ri_ln:nebel-1,Richard Nebel,US,1
+fl:ro_ln:riccomini-2,Robert A. Riccomini,US,1
+fl:ro_ln:mcloughlin-1,Robert H. McLoughlin,GB,1
 fl:ro_ln:fry-6,Robert L. Fry,,1
+fl:ro_ln:mcauley-1,Robert MCAULEY,US,1
+fl:ru_ln:daniello-1,Rudy Daniello,FR,1
+fl:sa_ln:hisakado-1,Sadao Hisakado,JP,1
 fl:sa_ln:huynh-1,Sam Huynh,US,1
+023k7x7lii8byffkw1bnqgni1,Sandra Oberdieck,US,1
 fl:sa_ln:lee-260,Sang Kyu Lee,KR,1
+fl:sa_ln:lee-40,Sang Min Lee,KR,1
+fl:sa_ln:gruba-1,Sarah M. Gruba,US,1
+01twduguxwaw53942cyr9c6ig,Say Wei Pang,MY,1
+fl:sc_ln:heavner-1,Scott Heavner,US,1
+fl:sc_ln:hoover-5,Scott Hoover,US,1
+fl:se_ln:shortlidge-1,Seth Shortlidge,,1
+fl:sh_ln:copeland-1,Shawn L. Copeland,US,1
+fl:sh_ln:jani-1,Shilesh C. Jani,US,1
+fl:sh_ln:kuze-4,Shinichi Kuze,,1
+fl:sh_ln:watanuki-2,Shinichi Watanuki,JP,1
+fl:sh_ln:zhang-215,Shiyuan Zhang,CN,1
 fl:sh_ln:kline-3,Shlomo Kline,IL,1
+fl:sh_ln:koga-22,Shota KOGA,JP,1
 fl:sh_ln:sharma-60,Shubham Sharma,US,1
+fl:so_ln:bouchoule-1,Sophie Bouchoule,FR,1
+fl:st_ln:baratian-1,Stephen A. Baratian,US,1
+fl:st_ln:nestor-1,Stephen Thomas Nestor,US,1
+fl:st_ln:grelier-1,Stéphane GRELIER,FR,1
+fl:su_ln:gupta-8,Subhas Chandra Gupta,IN,1
+fl:su_ln:kim-487,Sung Yong Kim,KR,1
 fl:su_ln:yoo-54,Sung-Hune Yoo,KR,1
+fl:su_ln:herles-1,Susan Herles,US,1
+fl:su_ln:ota-2,Susumu Ota,JP,1
+fl:sw_ln:koundinya-1,Swathi M. Koundinya,IN,1
+fl:ta_ln:song-62,Taewon SONG,KR,1
+fl:ta_ln:ueda-41,Takaharu Ueda,JP,1
+fl:ta_ln:yagi-23,Takao Yagi,JP,1
+fl:ta_ln:shimazaki-13,Takashi Shimazaki,JP,1
+fl:ta_ln:luo-5,Tao Luo,US,1
+fl:ta_ln:igarashi-40,Tatsuya Igarashi,JP,1
 fl:te_ln:jitsumatsu-1,Tetsuji Jitsumatsu,JP,1
+fl:te_ln:asada-5,Tetsuya Asada,JP,1
 fl:th_ln:alfishawi-1,Thabet Alfishawi,US,1
-fl:to_ln:ogata-29,Toshifumi Ogata,JPX,1
+fl:th_ln:nguyen-47,Thao Lien Thi Nguyen,AU,1
+fl:th_ln:soto-1,Thierry Soto,FR,1
+fl:th_ln:bruno-2,Thomas Bruno,US,1
+fl:th_ln:kettl-1,Thomas Kettl,DE,1
+fl:ti_ln:ju-3,Ting-Feng Ju,TW,1
+fl:to_ln:shivak-1,Tod A. Shivak,US,1
+fl:to_ln:johnsgard-1,Todd Johnsgard,US,1
+fl:to_ln:alam-1,Todd M. Alam,US,1
+fl:to_ln:vali-1,Tommaso Vali,,1
+fl:to_ln:shimoda-6,Tomoaki Shimoda,JP,1
+fl:to_ln:ogata-29,Toshifumi Ogata,JP,1
+fl:to_ln:hamaoka-2,Toshiyuki Hamaoka,JP,1
+fl:tr_ln:stevens-6,Travis E. Stevens,US,1
 fl:ts_ln:eguchi-1,Tsukasa Eguchi,,1
-fl:wa_ln:okawa-3,Wataru Okawa,JPX,1
+fl:tu_ln:pham-18,Tuan Pham,US,1
+fl:vi_ln:harradine-2,Vincent Carl Harradine,GB,1
+fl:vl_ln:leonkev-1,Vladislav Leonkev,DE,1
+025umf7yony9jw9bxrjm88vag,Wallace Perrigo,,1
+fl:wa_ln:okawa-3,Wataru Okawa,JP,1
+fl:wa_ln:fleming-1,Wayne C. Fleming,US,1
+fl:we_ln:li-385,Wenkai Li,CN,1
+fl:wh_ln:talbot-1,Whitney Talbot,,1
+fl:wi_ln:tse-1,Winston C. Tse,US,1
+fl:wo_ln:rockenfeller-1,Wolfgang Rockenfeller,DE,1
+fl:wo_ln:jeong-94,Woodon Jeong,SA,1
+fl:xi_ln:he-218,Xiaojin He,CN,1
+fl:xi_ln:huang-289,Xiaoteng HUANG,CN,1
+fl:xi_ln:jiang-253,Xinyang JIANG,CN,1
 fl:xu_ln:wang-139,Xun Wang,US,1
-fl:ya_ln:xue-30,Yan Xun Xue,CN,1
+fl:yi_ln:he-96,Yi-Da He,US,1
+fl:yi_ln:qi-11,Yihong Qi,CA,1
 fl:yi_ln:zhang-139,Yin Zhang,US,1
+fl:yo_ln:ogura-12,Yoichi Ogura,JP,1
+fl:yo_ln:arakawa-2,Yoshio Arakawa,JP,1
+fl:yo_ln:sakai-50,Yoshitsugu Sakai,JP,1
+fl:yo_ln:ishihara-15,Yoshiyuki Ishihara,JP,1
+fl:yu_ln:chang-169,Yu-Tsung Chang,TW,1
+fl:yu_ln:yi-29,Yunjung Yi,US,1
+fl:yu_ln:ota-1,Yurie Ota,JP,1
+fl:yu_ln:miki-13,Yutaka Miki,JP,1
+fl:yu_ln:mizuno-18,Yutaka Mizuno,JP,1
+fl:zh_ln:li-673,Zhenyu Li,CN,1
+fl:zh_ln:zhao-245,Zhibiao Zhao,US,1
+fl:zh_ln:pi-7,Zhouyue Pi,US,1
+fl:zu_ln:kossaczka-1,Zuzana Kossaczka,US,1

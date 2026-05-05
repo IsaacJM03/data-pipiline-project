@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import time
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -189,10 +190,57 @@ def _iter_tsv_chunks(file_path: Path, usecols: list[str] | None = None) -> Itera
 
 
 def _configure_sqlite(connection: sqlite3.Connection) -> None:
-    connection.execute("PRAGMA journal_mode = OFF")
-    connection.execute("PRAGMA synchronous = OFF")
+    # TRUNCATE keeps journal overhead lower on external disks than WAL.
+    connection.execute("PRAGMA journal_mode = TRUNCATE")
+    connection.execute("PRAGMA synchronous = NORMAL")
     connection.execute("PRAGMA temp_store = MEMORY")
     connection.execute("PRAGMA cache_size = -200000")
+    connection.execute("PRAGMA busy_timeout = 60000")
+
+
+def _is_retryable_sqlite_error(exc: sqlite3.OperationalError) -> bool:
+    message = str(exc).lower()
+    retryable_patterns = (
+        "database is locked",
+        "disk i/o error",
+        "database or disk is full",
+        "unable to open database file",
+    )
+    return any(pattern in message for pattern in retryable_patterns)
+
+
+def _execute_with_retry(connection: sqlite3.Connection, sql: str, params: tuple | None = None, attempts: int = 8) -> None:
+    delay = 0.5
+    for attempt in range(1, attempts + 1):
+        try:
+            if params is None:
+                connection.execute(sql)
+            else:
+                connection.execute(sql, params)
+            return
+        except sqlite3.OperationalError as exc:
+            if not _is_retryable_sqlite_error(exc) or attempt == attempts:
+                raise
+            time.sleep(delay)
+            delay = min(delay * 2, 8.0)
+
+
+def _executemany_with_retry(
+    connection: sqlite3.Connection,
+    sql: str,
+    params: list[tuple],
+    attempts: int = 8,
+) -> None:
+    delay = 0.5
+    for attempt in range(1, attempts + 1):
+        try:
+            connection.executemany(sql, params)
+            return
+        except sqlite3.OperationalError as exc:
+            if not _is_retryable_sqlite_error(exc) or attempt == attempts:
+                raise
+            time.sleep(delay)
+            delay = min(delay * 2, 8.0)
 
 
 def _append_chunks_to_table(
@@ -218,9 +266,9 @@ def _append_chunks_to_table(
 
         # Create table on first non-empty chunk
         if not table_created:
-            connection.execute(f'DROP TABLE IF EXISTS "{table_name}"')
+            _execute_with_retry(connection, f'DROP TABLE IF EXISTS "{table_name}"')
             cols_sql = ", ".join(f'"{col}" TEXT' for col in chunk.columns)
-            connection.execute(f'CREATE TABLE "{table_name}" ({cols_sql})')
+            _execute_with_retry(connection, f'CREATE TABLE "{table_name}" ({cols_sql})')
             table_created = True
         
         # Split chunk into smaller sub-chunks to avoid SQLite "too many SQL variables"
@@ -235,18 +283,21 @@ def _append_chunks_to_table(
             # Use raw SQL INSERT to avoid pandas' chunksize parameter issues
             columns = list(sub.columns)
             placeholders = ", ".join(["?" for _ in columns])
-            insert_stmt = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})"
+            quoted_columns = ", ".join(f'"{column}"' for column in columns)
+            insert_stmt = f'INSERT INTO "{table_name}" ({quoted_columns}) VALUES ({placeholders})'
             
             # Convert DataFrame rows to tuples of values
             rows_as_tuples = [tuple(row) for row in sub.values]
-            connection.executemany(insert_stmt, rows_as_tuples)
+            _executemany_with_retry(connection, insert_stmt, rows_as_tuples)
             written_rows += len(sub)
+            if written_rows % 50000 == 0:
+                connection.commit()
     
     # If no data was written but we know the schema, create an empty table
     if not table_created and transformed_columns:
-        connection.execute(f'DROP TABLE IF EXISTS "{table_name}"')
+        _execute_with_retry(connection, f'DROP TABLE IF EXISTS "{table_name}"')
         cols_sql = ", ".join(f'"{col}" TEXT' for col in transformed_columns)
-        connection.execute(f'CREATE TABLE "{table_name}" ({cols_sql})')
+        _execute_with_retry(connection, f'CREATE TABLE "{table_name}" ({cols_sql})')
         table_created = True
     
     connection.commit()
@@ -358,7 +409,7 @@ def build_staging_database(raw_dir: Path = RAW_DIR, staging_db: Path = STAGING_D
     if staging_db.exists():
         staging_db.unlink()
 
-    with sqlite3.connect(staging_db) as connection:
+    with sqlite3.connect(staging_db, timeout=30) as connection:
         _configure_sqlite(connection)
 
         _append_chunks_to_table(
@@ -449,7 +500,7 @@ def materialize_clean_tables(staging_db: Path, processed_dir: Path = PROCESSED_D
         if output.exists():
             output.unlink()
 
-    with sqlite3.connect(staging_db) as connection:
+    with sqlite3.connect(staging_db, timeout=30) as connection:
         # Patents: use GROUP BY to ensure one row per patent_id
         _write_query_to_csv(
             connection,

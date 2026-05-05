@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import sqlite3
 from pathlib import Path
 
@@ -117,6 +118,156 @@ def _safe_plot(fig):
         st.write("(Unable to render chart for this dataset slice)")
 
 
+COUNTRY_TO_ISO3 = {
+    "US": "USA",
+    "USA": "USA",
+    "UNITED STATES": "USA",
+    "UNITED STATES OF AMERICA": "USA",
+    "JP": "JPN",
+    "JPN": "JPN",
+    "JPX": "JPN",
+    "JAPAN": "JPN",
+    "DE": "DEU",
+    "DEU": "DEU",
+    "DEX": "DEU",
+    "GERMANY": "DEU",
+    "FR": "FRA",
+    "FRA": "FRA",
+    "FRANCE": "FRA",
+    "GB": "GBR",
+    "UK": "GBR",
+    "GBR": "GBR",
+    "UNITED KINGDOM": "GBR",
+    "DK": "DNK",
+    "DNK": "DNK",
+    "DKX": "DNK",
+    "DENMARK": "DNK",
+    "KR": "KOR",
+    "KOR": "KOR",
+    "KOREA": "KOR",
+    "SOUTH KOREA": "KOR",
+    "CN": "CHN",
+    "CHN": "CHN",
+    "CHINA": "CHN",
+    "TW": "TWN",
+    "TWN": "TWN",
+    "TAIWAN": "TWN",
+    "CA": "CAN",
+    "CAN": "CAN",
+    "CANADA": "CAN",
+    "IL": "ISR",
+    "ISR": "ISR",
+    "ISRAEL": "ISR",
+    "BR": "BRA",
+    "BRA": "BRA",
+    "BRAZIL": "BRA",
+    "IN": "IND",
+    "IND": "IND",
+    "INDIA": "IND",
+    "AU": "AUS",
+    "AUS": "AUS",
+    "AUSTRALIA": "AUS",
+    "NL": "NLD",
+    "NLD": "NLD",
+    "NETHERLANDS": "NLD",
+    "CH": "CHE",
+    "CHE": "CHE",
+    "SWITZERLAND": "CHE",
+    "SE": "SWE",
+    "SWE": "SWE",
+    "SWEDEN": "SWE",
+    "NO": "NOR",
+    "NOR": "NOR",
+    "NORWAY": "NOR",
+    "ES": "ESP",
+    "ESP": "ESP",
+    "SPAIN": "ESP",
+    "IT": "ITA",
+    "ITA": "ITA",
+    "ITALY": "ITA",
+    "MX": "MEX",
+    "MEX": "MEX",
+    "MEXICO": "MEX",
+    "RU": "RUS",
+    "RUS": "RUS",
+    "RUSSIA": "RUS",
+    "SG": "SGP",
+    "SGP": "SGP",
+    "SINGAPORE": "SGP",
+}
+
+
+def country_to_iso3(country: str | None) -> str | None:
+    if country is None or pd.isna(country):
+        return None
+
+    value = str(country).strip().upper()
+    if not value:
+        return None
+
+    if value in COUNTRY_TO_ISO3:
+        return COUNTRY_TO_ISO3[value]
+
+    if len(value) == 3 and value.isalpha():
+        return value
+
+    return None
+
+
+def build_country_geo_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame.empty or "country" not in frame.columns:
+        return pd.DataFrame(columns=["country", "patent_count", "iso3"])
+
+    geo = frame.copy()
+    geo["iso3"] = geo["country"].apply(country_to_iso3)
+    geo["country_label"] = geo["country"].fillna("Unknown")
+    return geo
+
+
+def add_cumulative_share(frame: pd.DataFrame, value_col: str, label_col: str) -> pd.DataFrame:
+    if frame.empty:
+        return frame.copy()
+
+    ordered = frame.copy()
+    ordered[value_col] = pd.to_numeric(ordered[value_col], errors="coerce").fillna(0)
+    ordered = ordered.sort_values(value_col, ascending=False).reset_index(drop=True)
+    total = ordered[value_col].sum()
+    if total <= 0:
+        ordered["share_pct"] = 0.0
+        ordered["cum_share_pct"] = 0.0
+        return ordered
+
+    ordered["share_pct"] = (ordered[value_col] / total * 100).round(2)
+    ordered["cum_share_pct"] = ordered["share_pct"].cumsum().round(2)
+    ordered["rank"] = ordered.index + 1
+    return ordered
+
+
+def summarize_concentration(frame: pd.DataFrame, value_col: str) -> dict[str, float]:
+    if frame.empty or value_col not in frame.columns:
+        return {"total": 0.0, "top1_pct": 0.0, "top3_pct": 0.0, "top5_pct": 0.0, "hhi": 0.0, "entropy": 0.0}
+
+    values = pd.to_numeric(frame[value_col], errors="coerce").fillna(0).sort_values(ascending=False)
+    total = float(values.sum())
+    if total <= 0:
+        return {"total": 0.0, "top1_pct": 0.0, "top3_pct": 0.0, "top5_pct": 0.0, "hhi": 0.0, "entropy": 0.0}
+
+    shares = values / total
+    top1_pct = float(shares.head(1).sum() * 100)
+    top3_pct = float(shares.head(3).sum() * 100)
+    top5_pct = float(shares.head(5).sum() * 100)
+    hhi = float((shares ** 2).sum())
+    entropy = float(-(shares * shares.map(lambda x: math.log2(x) if x > 0 else 0)).sum())
+    return {
+        "total": total,
+        "top1_pct": round(top1_pct, 2),
+        "top3_pct": round(top3_pct, 2),
+        "top5_pct": round(top5_pct, 2),
+        "hhi": round(hhi, 4),
+        "entropy": round(entropy, 3),
+    }
+
+
 # ── queries ────────────────────────────────────────────────────────────────────
 patents_df = load_db("SELECT * FROM patents")
 inventors_df = load_db("SELECT * FROM inventors")
@@ -169,6 +320,12 @@ country_share_df = load_db("""
     FROM country_counts c CROSS JOIN total t
     ORDER BY c.patent_count DESC
 """)
+
+country_geo_df = build_country_geo_frame(country_share_df)
+country_geo_map_df = country_geo_df[country_geo_df["iso3"].notna()].copy()
+country_geo_map_df = country_geo_map_df[country_geo_map_df["iso3"].str.len() == 3]
+country_concentration = summarize_concentration(country_share_df, "patent_count")
+country_share_rank_df = add_cumulative_share(country_share_df, "patent_count", "country")
 
 inventor_ranking_df = load_db("""
     SELECT inventor_id, name, country, patent_count,
@@ -227,59 +384,150 @@ if page == "Overview":
 
     # KPI metrics
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Total Patents", f"{len(patents_df):,}")
-    col2.metric("Total Inventors", f"{len(inventors_df):,}")
-    col3.metric("Total Companies", f"{len(companies_df):,}")
+    total_patents = len(patents_df)
+    total_inventors = len(inventors_df)
+    total_companies = len(companies_df)
     linked = len(relationships_df)
+    col1.metric("Total Patents", f"{total_patents:,}")
+    col2.metric("Total Inventors", f"{total_inventors:,}")
+    col3.metric("Total Companies", f"{total_companies:,}")
     col4.metric("Linked Records", f"{linked:,}")
 
+    kpi2a, kpi2b, kpi2c = st.columns(3)
+    latest_year = patents_per_year_df["year"].dropna().astype(int).max() if not patents_per_year_df.empty else None
+    latest_year_count = int(patents_per_year_df.loc[patents_per_year_df["year"] == latest_year, "patent_count"].iloc[0]) if latest_year is not None and not patents_per_year_df.empty else 0
+    linked_ratio = round((linked / total_patents) * 100, 2) if total_patents else 0
+    country_coverage = len(country_geo_map_df)
+    kpi2a.metric("Latest Year Patents", f"{latest_year_count:,}", f"{latest_year}" if latest_year else "")
+    kpi2b.metric("Linked Coverage", f"{linked_ratio}%")
+    kpi2c.metric("Mapped Countries", f"{country_coverage:,}")
+
     st.markdown("---")
-    # Year-over-year KPI and two-column overview charts
-    yoy_col1, yoy_col2, yoy_col3 = st.columns(3)
-    try:
-        py = patents_per_year_df.sort_values("year")
-        latest_year = int(py["year"].dropna().astype(int).iloc[-1])
-        latest_count = int(py[py["year"] == latest_year]["patent_count"].iloc[0])
-        prev_count = int(py[py["year"] == (latest_year - 1)]["patent_count"].iloc[0]) if (latest_year - 1) in py["year"].values else None
-        delta_pct = None
-        if prev_count and prev_count > 0:
-            delta_pct = round(((latest_count - prev_count) / prev_count) * 100, 2)
-        yoy_col1.metric("Patents (Latest year)", f"{latest_count:,}", f"{delta_pct}% vs prev year" if delta_pct is not None else "")
-    except Exception:
-        yoy_col1.metric("Patents (Latest year)", "N/A")
+    trend_col, composition_col = st.columns(2)
 
-    col_left, col_right = st.columns(2)
-
-    with col_left:
-        st.subheader("Patent Type Breakdown")
-        if not classification_df.empty:
-            fig_pie = px.pie(
-                classification_df,
-                names="label",
-                values="count",
-                color_discrete_sequence=px.colors.qualitative.Set2,
-                hole=0.4,
+    with trend_col:
+        st.subheader("Patent Growth and Momentum")
+        if not patents_per_year_df.empty:
+            py = patents_per_year_df.sort_values("year").copy()
+            py["rolling_3yr"] = py["patent_count"].rolling(window=3, min_periods=1).mean()
+            growth_fig = go.Figure()
+            growth_fig.add_trace(go.Scatter(
+                x=py["year"],
+                y=py["patent_count"],
+                mode="lines+markers",
+                line=dict(color="#2563eb", width=2),
+                name="Annual patents",
+            ))
+            growth_fig.add_trace(go.Scatter(
+                x=py["year"],
+                y=py["rolling_3yr"],
+                mode="lines",
+                line=dict(color="#0f766e", width=3, dash="dash"),
+                name="3-year rolling mean",
+            ))
+            growth_fig.update_layout(
+                title="Annual Patent Production",
+                xaxis_title="Year",
+                yaxis_title="Patent Count",
+                hovermode="x unified",
+                margin=dict(t=40, b=10),
             )
-            fig_pie.update_traces(textinfo="percent+label")
-            fig_pie.update_layout(showlegend=False, margin=dict(t=10, b=10))
-            _safe_plot(fig_pie)
+            _safe_plot(growth_fig)
+
+            growth_delta = None
+            if len(py) >= 2:
+                current = float(py["patent_count"].iloc[-1])
+                previous = float(py["patent_count"].iloc[-2])
+                if previous > 0:
+                    growth_delta = round(((current - previous) / previous) * 100, 2)
+            st.caption(f"Latest year: {latest_year} | Year-over-year change: {growth_delta}%" if growth_delta is not None else f"Latest year: {latest_year}")
+        else:
+            st.info("No year data.")
+
+    with composition_col:
+        st.subheader("Classification Mix and Coverage")
+        if not classification_df.empty:
+            class_fig = px.area(
+                classification_df,
+                x="classification",
+                y="count",
+                color="classification",
+                line_group="classification",
+                title="Classification Distribution",
+            )
+            class_fig.update_layout(
+                showlegend=False,
+                margin=dict(t=40, b=10),
+                xaxis_title="Classification",
+                yaxis_title="Patents",
+            )
+            _safe_plot(class_fig)
         else:
             st.info("No classification data.")
 
-    with col_right:
-        st.subheader("Patents per Year")
-        if not patents_per_year_df.empty:
-            fig_year = px.bar(
-                patents_per_year_df,
-                x="year",
-                y="patent_count",
-                labels={"year": "Year", "patent_count": "Patents"},
-                color_discrete_sequence=["#2563eb"],
+        concentration = summarize_concentration(top_companies_df, "patent_count")
+        c1, c2 = st.columns(2)
+        c1.metric("Top 1 Share", f"{concentration['top1_pct']:.2f}%")
+        c2.metric("Top 5 Share", f"{concentration['top5_pct']:.2f}%")
+
+    st.markdown("---")
+    st.subheader("Concentration Profile")
+    if not top_companies_df.empty and not top_inventors_df.empty:
+        pareto_left, pareto_right = st.columns(2)
+
+        with pareto_left:
+            company_pareto = add_cumulative_share(top_companies_df.copy(), "patent_count", "name")
+            pareto_fig = go.Figure()
+            pareto_fig.add_trace(go.Bar(
+                x=company_pareto["name"],
+                y=company_pareto["patent_count"],
+                marker_color="#059669",
+                name="Companies",
+            ))
+            pareto_fig.add_trace(go.Scatter(
+                x=company_pareto["name"],
+                y=company_pareto["cum_share_pct"],
+                mode="lines+markers",
+                yaxis="y2",
+                line=dict(color="#0f172a", width=2),
+                name="Cumulative share (%)",
+            ))
+            pareto_fig.update_layout(
+                title="Top Companies Pareto Curve",
+                yaxis=dict(title="Patent Count"),
+                yaxis2=dict(title="Cumulative Share (%)", overlaying="y", side="right", range=[0, 100]),
+                xaxis_tickangle=-35,
+                margin=dict(t=40, b=80),
+                legend=dict(orientation="h"),
             )
-            fig_year.update_layout(margin=dict(t=10, b=10))
-            _safe_plot(fig_year)
-        else:
-            st.info("No year data.")
+            _safe_plot(pareto_fig)
+
+        with pareto_right:
+            inventor_pareto = add_cumulative_share(top_inventors_df.copy(), "patent_count", "name")
+            inv_fig = go.Figure()
+            inv_fig.add_trace(go.Bar(
+                x=inventor_pareto["name"],
+                y=inventor_pareto["patent_count"],
+                marker_color="#2563eb",
+                name="Inventors",
+            ))
+            inv_fig.add_trace(go.Scatter(
+                x=inventor_pareto["name"],
+                y=inventor_pareto["cum_share_pct"],
+                mode="lines+markers",
+                yaxis="y2",
+                line=dict(color="#7c3aed", width=2),
+                name="Cumulative share (%)",
+            ))
+            inv_fig.update_layout(
+                title="Top Inventors Pareto Curve",
+                yaxis=dict(title="Patent Count"),
+                yaxis2=dict(title="Cumulative Share (%)", overlaying="y", side="right", range=[0, 100]),
+                xaxis_tickangle=-35,
+                margin=dict(t=40, b=80),
+                legend=dict(orientation="h"),
+            )
+            _safe_plot(inv_fig)
 
     st.markdown("---")
     st.subheader("Top Companies Snapshot")
@@ -327,6 +575,13 @@ elif page == "Top Inventors":
     else:
         n = top_n_slider("Show top N inventors", len(top_inventors_df))
         df_top = top_inventors_df.head(n)
+        inventor_stats = summarize_concentration(df_top, "patent_count")
+
+        stat_cols = st.columns(4)
+        stat_cols[0].metric("Top 1 Share", f"{inventor_stats['top1_pct']:.2f}%")
+        stat_cols[1].metric("Top 3 Share", f"{inventor_stats['top3_pct']:.2f}%")
+        stat_cols[2].metric("Top 5 Share", f"{inventor_stats['top5_pct']:.2f}%")
+        stat_cols[3].metric("HHI", f"{inventor_stats['hhi']:.4f}")
 
         fig = px.bar(
             df_top,
@@ -340,6 +595,20 @@ elif page == "Top Inventors":
         )
         fig.update_layout(yaxis={"categoryorder": "total ascending"}, coloraxis_showscale=False)
         _safe_plot(fig)
+
+        inventor_pareto = add_cumulative_share(df_top.copy(), "patent_count", "name")
+        pareto_fig = go.Figure()
+        pareto_fig.add_trace(go.Bar(x=inventor_pareto["name"], y=inventor_pareto["patent_count"], marker_color="#2563eb", name="Patent Count"))
+        pareto_fig.add_trace(go.Scatter(x=inventor_pareto["name"], y=inventor_pareto["cum_share_pct"], mode="lines+markers", yaxis="y2", line=dict(color="#7c3aed", width=2), name="Cumulative share (%)"))
+        pareto_fig.update_layout(
+            title="Inventor Concentration Curve",
+            yaxis=dict(title="Patent Count"),
+            yaxis2=dict(title="Cumulative Share (%)", overlaying="y", side="right", range=[0, 100]),
+            xaxis_tickangle=-35,
+            margin=dict(t=40, b=80),
+            legend=dict(orientation="h"),
+        )
+        _safe_plot(pareto_fig)
 
         st.subheader("Inventor Ranking (Q7 — Window Function)")
         st.dataframe(
@@ -368,6 +637,13 @@ elif page == "Top Companies":
     else:
         n = top_n_slider("Show top N companies", len(top_companies_df))
         df_top = top_companies_df.head(n)
+        company_stats = summarize_concentration(df_top, "patent_count")
+
+        stat_cols = st.columns(4)
+        stat_cols[0].metric("Top 1 Share", f"{company_stats['top1_pct']:.2f}%")
+        stat_cols[1].metric("Top 3 Share", f"{company_stats['top3_pct']:.2f}%")
+        stat_cols[2].metric("Top 5 Share", f"{company_stats['top5_pct']:.2f}%")
+        stat_cols[3].metric("HHI", f"{company_stats['hhi']:.4f}")
 
         fig = px.bar(
             df_top,
@@ -381,6 +657,20 @@ elif page == "Top Companies":
         )
         fig.update_layout(yaxis={"categoryorder": "total ascending"}, coloraxis_showscale=False)
         _safe_plot(fig)
+
+        company_pareto = add_cumulative_share(df_top.copy(), "patent_count", "name")
+        pareto_fig = go.Figure()
+        pareto_fig.add_trace(go.Bar(x=company_pareto["name"], y=company_pareto["patent_count"], marker_color="#059669", name="Patent Count"))
+        pareto_fig.add_trace(go.Scatter(x=company_pareto["name"], y=company_pareto["cum_share_pct"], mode="lines+markers", yaxis="y2", line=dict(color="#0f172a", width=2), name="Cumulative share (%)"))
+        pareto_fig.update_layout(
+            title="Company Concentration Curve",
+            yaxis=dict(title="Patent Count"),
+            yaxis2=dict(title="Cumulative Share (%)", overlaying="y", side="right", range=[0, 100]),
+            xaxis_tickangle=-35,
+            margin=dict(t=40, b=80),
+            legend=dict(orientation="h"),
+        )
+        _safe_plot(pareto_fig)
 
         st.subheader("Data Table")
         st.dataframe(
@@ -401,38 +691,101 @@ elif page == "Countries":
     if top_countries_df.empty:
         st.info("Country data is limited — most inventor records lack a country code in this dataset slice.")
     else:
+        stats = summarize_concentration(country_share_rank_df, "patent_count")
+        total_countries = len(country_share_rank_df)
+        mapped_countries = len(country_geo_map_df)
+
+        metric_cols = st.columns(4)
+        metric_cols[0].metric("Mapped Countries", f"{mapped_countries:,}")
+        metric_cols[1].metric("Country Categories", f"{total_countries:,}")
+        metric_cols[2].metric("Top Country Share", f"{stats['top1_pct']:.2f}%")
+        metric_cols[3].metric("Country Entropy", f"{stats['entropy']:.3f}")
+
         col_a, col_b = st.columns(2)
 
         with col_a:
+            country_bar_df = country_share_rank_df.head(15)
             fig_bar = px.bar(
-                top_countries_df.head(15),
-                x="country",
-                y="patent_count",
-                color="patent_count",
+                country_bar_df,
+                x="patent_count",
+                y="country",
+                orientation="h",
+                color="share_pct",
                 color_continuous_scale="Oranges",
-                labels={"country": "Country", "patent_count": "Patent Count"},
+                labels={"country": "Country", "patent_count": "Patent Count", "share_pct": "Share (%)"},
                 title="Top Countries by Patent Count",
             )
-            fig_bar.update_layout(coloraxis_showscale=False)
+            fig_bar.update_layout(coloraxis_showscale=True, yaxis=dict(categoryorder="total ascending"))
             _safe_plot(fig_bar)
 
         with col_b:
-            fig_map = px.choropleth(
-                top_countries_df,
-                locations="country",
-                locationmode="ISO-3 alpha",
-                color="patent_count",
-                color_continuous_scale="YlOrRd",
-                title="Patent Density by Country",
-            )
-            fig_map.update_layout(margin=dict(t=40, b=10))
-            _safe_plot(fig_map)
+            if not country_geo_map_df.empty:
+                fig_map = px.choropleth(
+                    country_geo_map_df,
+                    locations="iso3",
+                    locationmode="ISO-3",
+                    color="patent_count",
+                    hover_name="country_label",
+                    hover_data={"iso3": True, "patent_count": True, "share_pct": ":.2f"},
+                    color_continuous_scale="YlOrRd",
+                    title="Patent Density by Country",
+                )
+                fig_map.update_geos(showframe=False, showcoastlines=True, projection_type="natural earth")
+                fig_map.update_layout(margin=dict(t=40, b=10))
+                _safe_plot(fig_map)
+            else:
+                st.info("No ISO-3 countries were available for the geo map.")
 
-        st.subheader("Country Share (Q6 — CTE Query)")
+        st.subheader("Country Share and Concentration")
+        share_left, share_right = st.columns(2)
+
+        with share_left:
+            pareto_country = add_cumulative_share(country_share_rank_df.copy(), "patent_count", "country")
+            pareto_fig = go.Figure()
+            pareto_fig.add_trace(go.Bar(
+                x=pareto_country["country"],
+                y=pareto_country["patent_count"],
+                marker_color="#f97316",
+                name="Patent Count",
+            ))
+            pareto_fig.add_trace(go.Scatter(
+                x=pareto_country["country"],
+                y=pareto_country["cum_share_pct"],
+                mode="lines+markers",
+                yaxis="y2",
+                line=dict(color="#1f2937", width=2),
+                name="Cumulative share (%)",
+            ))
+            pareto_fig.update_layout(
+                title="Country Concentration Curve",
+                yaxis=dict(title="Patent Count"),
+                yaxis2=dict(title="Cumulative Share (%)", overlaying="y", side="right", range=[0, 100]),
+                xaxis_tickangle=-35,
+                margin=dict(t=40, b=80),
+                legend=dict(orientation="h"),
+            )
+            _safe_plot(pareto_fig)
+
+        with share_right:
+            if not country_share_rank_df.empty:
+                fig_hist = px.histogram(
+                    country_share_rank_df,
+                    x="patent_count",
+                    nbins=min(20, max(5, len(country_share_rank_df) // 2)),
+                    title="Distribution of Patent Counts per Country",
+                    labels={"patent_count": "Patent Count"},
+                    color_discrete_sequence=["#0ea5e9"],
+                )
+                fig_hist.update_layout(margin=dict(t=40, b=10))
+                _safe_plot(fig_hist)
+
         st.dataframe(
-            country_share_df.rename(columns={
-                "country": "Country", "patent_count": "Patents", "share_pct": "Share (%)"
-            }),
+            country_share_rank_df.rename(columns={
+                "country": "Country",
+                "patent_count": "Patents",
+                "share_pct": "Share (%)",
+                "cum_share_pct": "Cum. Share (%)",
+            })[["Country", "Patents", "Share (%)", "Cum. Share (%)", "rank"]],
             width='stretch',
             hide_index=True,
         )
@@ -523,12 +876,32 @@ elif page == "Patent Explorer":
     if year_filter:
         filtered = filtered[filtered["year"].isin(year_filter)]
 
-    st.markdown(f"**Showing {len(filtered):,} patents**")
+    max_patent_window = min(1_000_000, len(filtered))
+    if max_patent_window >= 500_000:
+        default_window = min(750_000, max_patent_window)
+        patent_window = st.slider("Patent preview window", 500_000, max_patent_window, default_window, step=50_000)
+    else:
+        patent_window = st.slider("Patent preview window", 1, max_patent_window, max_patent_window)
 
-    # Display as interactive table with selected columns
+    page_size = st.selectbox("Rows per page", [50, 100, 250], index=1)
+    window_df = filtered.head(patent_window).copy()
+    total_pages = max(1, math.ceil(len(window_df) / page_size))
+    page_number = st.number_input("Page", min_value=1, max_value=total_pages, value=1, step=1)
+    start_idx = (int(page_number) - 1) * page_size
+    end_idx = start_idx + page_size
+    page_df = window_df.iloc[start_idx:end_idx].copy()
+
+    st.markdown(f"**Matching patents:** {len(filtered):,} | **Windowed preview:** {len(window_df):,} | **Page:** {int(page_number)} / {total_pages}")
+
+    explorer_cols = st.columns(4)
+    explorer_cols[0].metric("Window Size", f"{patent_window:,}")
+    explorer_cols[1].metric("Page Size", f"{page_size:,}")
+    explorer_cols[2].metric("Displayed Rows", f"{len(page_df):,}")
+    explorer_cols[3].metric("Unique Years", f"{window_df['year'].nunique():,}")
+
     display_cols = ["patent_id", "title", "year", "classification", "filing_date"]
     st.dataframe(
-        filtered[display_cols].rename(columns={
+        page_df[display_cols].rename(columns={
             "patent_id": "Patent ID",
             "title": "Title",
             "year": "Year",
@@ -540,14 +913,28 @@ elif page == "Patent Explorer":
         height=400,
     )
 
-    if not filtered.empty:
+    if not page_df.empty:
         st.markdown("---")
         st.subheader("Abstract Viewer")
-        selected_id = st.selectbox("Select a patent to read its abstract", filtered["patent_id"].tolist())
-        row = filtered[filtered["patent_id"] == selected_id].iloc[0]
+        selected_id = st.selectbox("Select a patent to read its abstract", page_df["patent_id"].tolist())
+        row = page_df[page_df["patent_id"] == selected_id].iloc[0]
         st.markdown(f"**{row['title']}**")
         st.markdown(f"*Patent ID: {row['patent_id']} | Filed: {row['filing_date']} | Type: {row['classification']}*")
         st.markdown(row["abstract"] or "_No abstract available._")
+
+        st.markdown("---")
+        st.subheader("Slice Diagnostics")
+        slice_metrics = st.columns(4)
+        slice_metrics[0].metric("Earliest Year", f"{int(window_df['year'].min())}" if window_df["year"].notna().any() else "N/A")
+        slice_metrics[1].metric("Latest Year", f"{int(window_df['year'].max())}" if window_df["year"].notna().any() else "N/A")
+        slice_metrics[2].metric("Classification Types", f"{window_df['classification'].nunique():,}")
+        slice_metrics[3].metric("Abstract Coverage", f"{round(window_df['abstract'].notna().mean() * 100, 2)}%")
+
+        slice_years = window_df["year"].value_counts(dropna=False).sort_index().reset_index()
+        slice_years.columns = ["year", "patent_count"]
+        if not slice_years.empty:
+            fig_slice = px.line(slice_years, x="year", y="patent_count", markers=True, title="Year Distribution in Window")
+            _safe_plot(fig_slice)
 
     st.markdown("---")
     st.subheader("Q5 — JOIN Query: Patents with Inventors and Companies")
