@@ -20,8 +20,70 @@ CORE_SOURCE_FILES = {
     "abstracts_raw": RAW_DIR / "g_patent_abstract.tsv",
     "inventors_raw": RAW_DIR / "g_inventor_disambiguated.tsv",
     "locations_raw": RAW_DIR / "g_location_disambiguated.tsv",
+    # Use the persistent assignee table for company UUID columns (disamb_assignee_id_*)
+    # The disambiguated assignee file (`g_assignee_disambiguated.tsv`) contains organization
+    # names and `assignee_id`, while the persistent assignee file contains the
+    # `disamb_assignee_id_YYYYMMDD` columns we need to resolve companies.
     "assignees_raw": RAW_DIR / "g_persistent_assignee.tsv",
 }
+
+# Optional non-disambiguated locations to fill missing country values
+OPTIONAL_SOURCE_FILES = {
+    "locations_not_disambiguated_raw": RAW_DIR / "g_location_not_disambiguated.tsv",
+}
+
+def _normalize_country_code(raw_country: str | None) -> str | None:
+    """Normalize raw country string to ISO 3166-1 alpha-2 code.
+    
+    Uses a small heuristic map to handle common misspellings and variants.
+    """
+    if not raw_country or not isinstance(raw_country, str):
+        return None
+    
+    country = raw_country.strip().upper()
+    if not country:
+        return None
+    
+    # Map of known variants to ISO codes
+    normalize_map = {
+        "US": "US", "USA": "US", "UNITED STATES": "US", "UNITED STATES OF AMERICA": "US",
+        "GB": "GB", "UK": "GB", "UNITED KINGDOM": "GB", "GREAT BRITAIN": "GB",
+        "JP": "JP", "JAPAN": "JP",
+        "DE": "DE", "GERMANY": "DE", "DEUTSCHLAND": "DE",
+        "FR": "FR", "FRANCE": "FR",
+        "CA": "CA", "CANADA": "CA",
+        "CN": "CN", "CHINA": "CN",
+        "IN": "IN", "INDIA": "IN",
+        "BR": "BR", "BRAZIL": "BR",
+        "AU": "AU", "AUSTRALIA": "AU",
+        "NL": "NL", "NETHERLANDS": "NL", "HOLLAND": "NL",
+        "KR": "KR", "SOUTH KOREA": "KR", "KOREA": "KR",
+        "SG": "SG", "SINGAPORE": "SG",
+        "CH": "CH", "SWITZERLAND": "CH", "SWISS": "CH",
+        "SE": "SE", "SWEDEN": "SE",
+        "NO": "NO", "NORWAY": "NO",
+        "DK": "DK", "DENMARK": "DK",
+        "IT": "IT", "ITALY": "IT",
+        "ES": "ES", "SPAIN": "ES",
+        "MX": "MX", "MEXICO": "MX",
+        "RU": "RU", "RUSSIA": "RU", "RUSSIAN FEDERATION": "RU",
+        "IL": "IL", "ISRAEL": "IL",
+        "TW": "TW", "TAIWAN": "TW",
+        "HK": "HK", "HONG KONG": "HK",
+    }
+    
+    # Try exact match first
+    if country in normalize_map:
+        return normalize_map[country]
+    
+    # Try first 2 chars if it's already a code-like format
+    if len(country) >= 2 and country[:2].isalpha():
+        return country[:2]
+    
+    return None
+
+# Optional assignee names file for enriching company names with disambiguated organization field
+ASSIGNEE_NAMES_FILE = RAW_DIR / "g_assignee_disambiguated.tsv"
 
 SAMPLE_PATENTS = pd.DataFrame(
     [
@@ -142,10 +204,15 @@ def _append_chunks_to_table(
     written_rows = 0
     SQLITE_MAX_VARS = 999
     table_created = False
+    transformed_columns = None
     
     for chunk in chunks:
         if transform is not None:
             chunk = transform(chunk)
+            # Capture transformed output columns (even from empty DataFrames)
+            if transformed_columns is None:
+                transformed_columns = list(chunk.columns)
+            
         if chunk.empty:
             continue
 
@@ -174,6 +241,13 @@ def _append_chunks_to_table(
             rows_as_tuples = [tuple(row) for row in sub.values]
             connection.executemany(insert_stmt, rows_as_tuples)
             written_rows += len(sub)
+    
+    # If no data was written but we know the schema, create an empty table
+    if not table_created and transformed_columns:
+        connection.execute(f'DROP TABLE IF EXISTS "{table_name}"')
+        cols_sql = ", ".join(f'"{col}" TEXT' for col in transformed_columns)
+        connection.execute(f'CREATE TABLE "{table_name}" ({cols_sql})')
+        table_created = True
     
     connection.commit()
     return written_rows
@@ -205,6 +279,15 @@ def _load_locations(chunk: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
+def _load_locations_not_disambiguated(chunk: pd.DataFrame) -> pd.DataFrame:
+    """Load non-disambiguated locations and normalize raw_country codes."""
+    result = chunk[["location_id", "raw_country"]].copy()
+    result = result.rename(columns={"raw_country": "country"})
+    result["country"] = result["country"].apply(_normalize_country_code)
+    result = result.dropna(subset=["location_id", "country"])
+    return result
+
+
 def _load_assignees(chunk: pd.DataFrame) -> pd.DataFrame:
     company_columns = [column for column in chunk.columns if column.startswith("disamb_assignee_id_")]
     if not company_columns:
@@ -214,6 +297,18 @@ def _load_assignees(chunk: pd.DataFrame) -> pd.DataFrame:
     result[company_columns] = result[company_columns].replace("", pd.NA)
     result["company_id"] = result[company_columns].bfill(axis=1).iloc[:, 0]
     result = result[["patent_id", "company_id"]].dropna(subset=["patent_id", "company_id"])
+    return result
+
+
+def _load_assignee_names(chunk: pd.DataFrame) -> pd.DataFrame:
+    id_col = next((c for c in ("assignee_id", "disambig_assignee_id") if c in chunk.columns), None)
+    if not id_col or "disambig_assignee_organization" not in chunk.columns:
+        return pd.DataFrame(columns=["assignee_id", "organization"])
+
+    result = chunk[[id_col, "disambig_assignee_organization"]].copy()
+    result = result.rename(columns={id_col: "assignee_id", "disambig_assignee_organization": "organization"})
+    result = result.dropna(subset=["assignee_id", "organization"])
+    result = result[result["organization"].str.strip() != ""]
     return result
 
 
@@ -300,11 +395,37 @@ def build_staging_database(raw_dir: Path = RAW_DIR, staging_db: Path = STAGING_D
             _load_assignees,
         )
 
+        if ASSIGNEE_NAMES_FILE.exists():
+            _append_chunks_to_table(
+                connection,
+                "assignee_names_raw",
+                _iter_tsv_chunks(
+                    ASSIGNEE_NAMES_FILE,
+                    usecols=["assignee_id", "disambig_assignee_organization"],
+                ),
+                _load_assignee_names,
+            )
+            connection.execute(
+                "CREATE INDEX IF NOT EXISTS idx_assignee_names_id ON assignee_names_raw(assignee_id)"
+            )
+
         connection.execute("CREATE INDEX IF NOT EXISTS idx_patents_raw_id ON patents_raw(patent_id)")
         connection.execute("CREATE INDEX IF NOT EXISTS idx_abstracts_raw_id ON abstracts_raw(patent_id)")
         connection.execute("CREATE INDEX IF NOT EXISTS idx_inventors_raw_id ON inventors_raw(patent_id)")
         connection.execute("CREATE INDEX IF NOT EXISTS idx_locations_raw_id ON locations_raw(location_id)")
-        connection.execute("CREATE INDEX IF NOT EXISTS idx_assignees_raw_id ON assignees_raw(patent_id)")
+        connection.execute("CREATE INDEX IF NOT EXISTS idx_assignees_raw_id ON assignees_raw(company_id)")
+
+        # Optional: load non-disambiguated locations for country fallback
+        locations_not_disambig = OPTIONAL_SOURCE_FILES["locations_not_disambiguated_raw"]
+        if locations_not_disambig.exists():
+            _append_chunks_to_table(
+                connection,
+                "locations_not_disambiguated_raw",
+                _iter_tsv_chunks(locations_not_disambig, usecols=["location_id", "raw_country"]),
+                _load_locations_not_disambiguated,
+            )
+            connection.execute("CREATE INDEX IF NOT EXISTS idx_locations_not_disamb_id ON locations_not_disambiguated_raw(location_id)")
+        
         connection.commit()
 
     return staging_db
@@ -351,16 +472,19 @@ def materialize_clean_tables(staging_db: Path, processed_dir: Path = PROCESSED_D
         )
 
         # Inventors: use GROUP BY to ensure one row per inventor_id
+        # Use COALESCE to prefer disambiguated country, fall back to normalized raw_country
         _write_query_to_csv(
             connection,
             """
             SELECT
                 i.inventor_id,
                 MAX(COALESCE(NULLIF(TRIM(COALESCE(i.disambig_inventor_name_first, '') || ' ' || COALESCE(i.disambig_inventor_name_last, '')), ''), i.inventor_id)) AS name,
-                MAX(l.disambig_country) AS country
+                MAX(COALESCE(l.disambig_country, lnd.country)) AS country
             FROM inventors_raw i
             LEFT JOIN locations_raw l
                 ON l.location_id = i.location_id
+            LEFT JOIN locations_not_disambiguated_raw lnd
+                ON lnd.location_id = i.location_id
             WHERE i.inventor_id IS NOT NULL AND i.inventor_id <> ''
             GROUP BY i.inventor_id
             ORDER BY i.inventor_id
@@ -368,16 +492,20 @@ def materialize_clean_tables(staging_db: Path, processed_dir: Path = PROCESSED_D
             outputs["inventors"],
         )
 
-        # Companies: select distinct company_id
+        # Companies: resolve UUIDs to real org names when g_assignee_disambiguated.tsv was loaded
         _write_query_to_csv(
             connection,
             """
             SELECT DISTINCT
-                company_id,
-                company_id AS name
-            FROM assignees_raw
-            WHERE company_id IS NOT NULL AND company_id <> ''
-            ORDER BY company_id
+                a.company_id,
+                COALESCE(
+                    NULLIF(TRIM(COALESCE(n.organization, '')), ''),
+                    a.company_id
+                ) AS name
+            FROM assignees_raw a
+            LEFT JOIN assignee_names_raw n ON n.assignee_id = a.company_id
+            WHERE a.company_id IS NOT NULL AND a.company_id <> ''
+            ORDER BY a.company_id
             """,
             outputs["companies"],
         )

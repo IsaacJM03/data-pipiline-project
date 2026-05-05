@@ -1,4 +1,37 @@
 inventor_id,name,country,patent_count
-fl:ar_ln:judzis-1,Arvids Judzis,,1
-fl:to_ln:ogata-29,Toshifumi Ogata,,1
-fl:yi_ln:zhang-139,Yin Zhang,,1
+fl:ak_ln:tsuruoka-1,Akihiko Tsuruoka,JPX,1
+fl:ak_ln:maekawa-5,Akinori Maekawa,JPX,1
+fl:al_ln:hedinger-2,Alfred Hedinger,,1
+fl:am_ln:alali-7,Ammar Al-Ali,US,1
+fl:an_ln:kienzle-1,Andreas Kienzle,DE,1
+fl:ar_ln:judzis-1,Arvids Judzis,US,1
+fl:ba_ln:zhao-3,Bao-Ping Zhao,US,1
+fl:da_ln:meyer-50,Daniel Meyer,US,1
+fl:do_ln:kim-296,Dong Jin Kim,KR,1
+fl:du_ln:moon-7,Duck Su Moon,KR,1
+fl:ga_ln:cotton-3,Gary W. Cotton,,1
+fl:ga_ln:sherry-1,Gavin Sherry,US,1
+fl:ge_ln:jensen-2,Georg W. Jensen,DKX,1
+fl:gr_ln:meyer-8,Gregory S. Meyer,US,1
+fl:hu_ln:katus-1,Hugo Katus,DE,1
+fl:ji_ln:wang-689,Jian Wang,CN,1
+fl:ne_ln:alexander-2,Nelson Alexander,,1
+fl:ni_ln:grater-1,Nicholas Gräter,DE,1
+fl:pe_ln:rieckhoff-1,Peter Rieckhoff,DE,1
+fl:pe_ln:smith-41,Peter Smith,US,1
+fl:ri_ln:broglie-1,Richard Broglie,US,1
+fl:ri_ln:conrad-5,Richard Conrad,US,1
+fl:ro_ln:fry-6,Robert L. Fry,,1
+fl:sa_ln:huynh-1,Sam Huynh,US,1
+fl:sa_ln:lee-260,Sang Kyu Lee,KR,1
+fl:sh_ln:kline-3,Shlomo Kline,IL,1
+fl:sh_ln:sharma-60,Shubham Sharma,US,1
+fl:su_ln:yoo-54,Sung-Hune Yoo,KR,1
+fl:te_ln:jitsumatsu-1,Tetsuji Jitsumatsu,JP,1
+fl:th_ln:alfishawi-1,Thabet Alfishawi,US,1
+fl:to_ln:ogata-29,Toshifumi Ogata,JPX,1
+fl:ts_ln:eguchi-1,Tsukasa Eguchi,,1
+fl:wa_ln:okawa-3,Wataru Okawa,JPX,1
+fl:xu_ln:wang-139,Xun Wang,US,1
+fl:ya_ln:xue-30,Yan Xun Xue,CN,1
+fl:yi_ln:zhang-139,Yin Zhang,US,1

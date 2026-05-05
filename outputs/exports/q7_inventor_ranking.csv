@@ -1,4 +1,37 @@
 inventor_id,name,country,patent_count,inventor_rank
-fl:ar_ln:judzis-1,Arvids Judzis,,1,1
-fl:to_ln:ogata-29,Toshifumi Ogata,,1,2
-fl:yi_ln:zhang-139,Yin Zhang,,1,3
+fl:ak_ln:tsuruoka-1,Akihiko Tsuruoka,JPX,1,1
+fl:ak_ln:maekawa-5,Akinori Maekawa,JPX,1,2
+fl:al_ln:hedinger-2,Alfred Hedinger,,1,3
+fl:am_ln:alali-7,Ammar Al-Ali,US,1,4
+fl:an_ln:kienzle-1,Andreas Kienzle,DE,1,5
+fl:ar_ln:judzis-1,Arvids Judzis,US,1,6
+fl:ba_ln:zhao-3,Bao-Ping Zhao,US,1,7
+fl:da_ln:meyer-50,Daniel Meyer,US,1,8
+fl:do_ln:kim-296,Dong Jin Kim,KR,1,9
+fl:du_ln:moon-7,Duck Su Moon,KR,1,10
+fl:ga_ln:cotton-3,Gary W. Cotton,,1,11
+fl:ga_ln:sherry-1,Gavin Sherry,US,1,12
+fl:ge_ln:jensen-2,Georg W. Jensen,DKX,1,13
+fl:gr_ln:meyer-8,Gregory S. Meyer,US,1,14
+fl:hu_ln:katus-1,Hugo Katus,DE,1,15
+fl:ji_ln:wang-689,Jian Wang,CN,1,16
+fl:ne_ln:alexander-2,Nelson Alexander,,1,17
+fl:ni_ln:grater-1,Nicholas Gräter,DE,1,18
+fl:pe_ln:rieckhoff-1,Peter Rieckhoff,DE,1,19
+fl:pe_ln:smith-41,Peter Smith,US,1,20
+fl:ri_ln:broglie-1,Richard Broglie,US,1,21
+fl:ri_ln:conrad-5,Richard Conrad,US,1,22
+fl:ro_ln:fry-6,Robert L. Fry,,1,23
+fl:sa_ln:huynh-1,Sam Huynh,US,1,24
+fl:sa_ln:lee-260,Sang Kyu Lee,KR,1,25
+fl:sh_ln:kline-3,Shlomo Kline,IL,1,26
+fl:sh_ln:sharma-60,Shubham Sharma,US,1,27
+fl:su_ln:yoo-54,Sung-Hune Yoo,KR,1,28
+fl:te_ln:jitsumatsu-1,Tetsuji Jitsumatsu,JP,1,29
+fl:th_ln:alfishawi-1,Thabet Alfishawi,US,1,30
+fl:to_ln:ogata-29,Toshifumi Ogata,JPX,1,31
+fl:ts_ln:eguchi-1,Tsukasa Eguchi,,1,32
+fl:wa_ln:okawa-3,Wataru Okawa,JPX,1,33
+fl:xu_ln:wang-139,Xun Wang,US,1,34
+fl:ya_ln:xue-30,Yan Xun Xue,CN,1,35
+fl:yi_ln:zhang-139,Yin Zhang,US,1,36

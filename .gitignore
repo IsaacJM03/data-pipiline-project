@@ -17,3 +17,8 @@ data/raw/*.txt
 *.claude/
 .vscode/settings.json
 .DS_Store
+*.db
+*.log
+outputs/cache/
+data/patent_analytics.db
+data/processed/patent_staging.db

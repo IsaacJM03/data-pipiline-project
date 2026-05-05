@@ -91,16 +91,52 @@ def generate_reports(
     report_json_path.write_text(json.dumps(report_payload, indent=2), encoding="utf-8")
 
     chart_path = generate_visualizations(results, reports_dir)
+    # Verbose terminal output for humans — more descriptive, multi-line summary
+    print("\n=== Patent Analytics Report ===")
+    print(f"Database: {db_path}")
+    print(f"Total patents: {total_patents:,}")
 
-    print("\nPatent Analytics Report")
-    print("=" * 26)
-    print(f"Total patents: {total_patents}")
-    print("\nTop 3 inventors:")
-    print(top_inventors.to_string(index=False))
-    print("\nTop 3 companies:")
-    print(top_companies.to_string(index=False))
-    print("\nTop countries:")
-    print(top_countries.to_string(index=False))
+    # Sizes for key tables (best-effort using query results)
+    try:
+        counts = {
+            "patents": int(results.get("q4_patents_per_year", pd.DataFrame())["patent_count"].sum())
+        }
+    except Exception:
+        counts = {}
+
+    print("\n-- Top Inventors (Top 10) --")
+    print(top_inventors.head(10).to_string(index=False))
+
+    print("\n-- Top Companies (Top 10) --")
+    print(top_companies.head(10).to_string(index=False))
+
+    print("\n-- Top Countries (Top 10) --")
+    print(results.get("q3_top_countries", top_countries).head(10).to_string(index=False))
+
+    # Additional diagnostics
+    all_inventors = results.get("q7_inventor_ranking", pd.DataFrame())
+    all_companies = results.get("q2_top_companies", pd.DataFrame())
+    if not all_inventors.empty:
+        total_inventors = int(all_inventors["patent_count"].count())
+        top1 = all_inventors.sort_values("patent_count", ascending=False).head(1)
+        top1_name = top1["name"].iloc[0]
+        top1_count = int(top1["patent_count"].iloc[0])
+        print(f"\nInventor records: {total_inventors:,} | Top inventor: {top1_name} ({top1_count} patents)")
+
+    if not all_companies.empty:
+        total_companies = int(all_companies["patent_count"].count())
+        topco = all_companies.sort_values("patent_count", ascending=False).head(1)
+        topco_name = topco["name"].iloc[0]
+        topco_count = int(topco["patent_count"].iloc[0])
+        print(f"Companies with patents: {total_companies:,} | Top company: {topco_name} ({topco_count} patents)")
+
+    # Country coverage diagnostic
+    country_df = results.get("q3_top_countries", pd.DataFrame())
+    if not country_df.empty:
+        total_countries = country_df.shape[0]
+        known_share = country_df["patent_count"].sum()
+        print(f"\nCountries reported: {total_countries:,} | Patents counted in country stats: {known_share:,}")
+
     print(f"\nJSON report: {report_json_path}")
     print(f"Trend chart: {chart_path}")
 

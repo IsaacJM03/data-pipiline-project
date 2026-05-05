@@ -213,10 +213,11 @@ def download_url_to_path(url: str, target_path: Path) -> None:
 
 
 def unpack_zip_files(raw_dir: Path) -> None:
-    """Extract all zip archives in the raw directory."""
+    """Extract all zip archives in the raw directory and delete them afterward."""
     for archive in raw_dir.glob("*.zip"):
         with zipfile.ZipFile(archive) as zipped:
             zipped.extractall(raw_dir)
+        archive.unlink(missing_ok=True)
 
 
 def pull_patentsview_data(raw_dir: Path) -> bool:

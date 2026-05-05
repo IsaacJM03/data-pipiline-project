@@ -1,46 +1,62 @@
 {
-  "total_patents": 5000,
+  "total_patents": 20000,
   "top_inventors": [
     {
-      "inventor_id": "fl:ar_ln:judzis-1",
-      "name": "Arvids Judzis",
-      "country": null,
+      "inventor_id": "fl:ak_ln:tsuruoka-1",
+      "name": "Akihiko Tsuruoka",
+      "country": "JPX",
       "patent_count": 1
     },
     {
-      "inventor_id": "fl:to_ln:ogata-29",
-      "name": "Toshifumi Ogata",
-      "country": null,
+      "inventor_id": "fl:ak_ln:maekawa-5",
+      "name": "Akinori Maekawa",
+      "country": "JPX",
       "patent_count": 1
     },
     {
-      "inventor_id": "fl:yi_ln:zhang-139",
-      "name": "Yin Zhang",
+      "inventor_id": "fl:al_ln:hedinger-2",
+      "name": "Alfred Hedinger",
       "country": null,
       "patent_count": 1
     }
   ],
   "top_companies": [
     {
-      "company_id": "org_Cm4tbqntr5mVzlKtZPuE",
-      "name": "org_Cm4tbqntr5mVzlKtZPuE",
-      "patent_count": 1
-    },
-    {
-      "company_id": "org_mtRTVDEdo0lNlOp0GcwZ",
-      "name": "org_mtRTVDEdo0lNlOp0GcwZ",
-      "patent_count": 1
-    },
-    {
       "company_id": "org_xlNWqmrnphnhzaJwiIFe",
-      "name": "org_xlNWqmrnphnhzaJwiIFe",
+      "name": "AT&T Intellectual Property I, L.P.",
+      "patent_count": 1
+    },
+    {
+      "company_id": "org_fm2atUfIgtKaqU3GsJSZ",
+      "name": "Applied Biosystems, LLC",
+      "patent_count": 1
+    },
+    {
+      "company_id": "9844b584-946d-4f31-8b56-a402f3b5baca",
+      "name": "BOE Technology Group Co., Ltd.",
       "patent_count": 1
     }
   ],
   "top_countries": [
     {
+      "country": "US",
+      "patent_count": 14
+    },
+    {
       "country": null,
-      "patent_count": 3
+      "patent_count": 5
+    },
+    {
+      "country": "DE",
+      "patent_count": 4
+    },
+    {
+      "country": "JPX",
+      "patent_count": 4
+    },
+    {
+      "country": "KR",
+      "patent_count": 4
     }
   ]
 }

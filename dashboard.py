@@ -34,8 +34,58 @@ if not DB_PATH.exists():
 # ── data loading ───────────────────────────────────────────────────────────────
 @st.cache_data
 def load_db(query: str) -> pd.DataFrame:
+    """Load a SQL query from the analytics DB with an on-disk cache.
+
+    Cache is keyed by the SHA1 of the query and invalidated when the DB file's
+    modification time changes. Parquet is preferred; pickle is a fallback.
+    """
+    import hashlib
+
+    cache_dir = BASE / "outputs" / "cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    key = hashlib.sha1(query.encode("utf-8")).hexdigest()
+    meta_path = cache_dir / f"{key}.meta.json"
+    parquet_path = cache_dir / f"{key}.parquet"
+    pkl_path = cache_dir / f"{key}.pkl"
+
+    db_mtime = DB_PATH.stat().st_mtime if DB_PATH.exists() else 0
+
+    # Try parquet cache first
+    if parquet_path.exists() and meta_path.exists():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            if meta.get("db_mtime") == db_mtime:
+                return pd.read_parquet(parquet_path)
+        except Exception:
+            pass
+
+    # Fallback to pickle cache
+    if pkl_path.exists() and meta_path.exists():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            if meta.get("db_mtime") == db_mtime:
+                return pd.read_pickle(pkl_path)
+        except Exception:
+            pass
+
+    # Run the query against SQLite and populate cache
     with sqlite3.connect(DB_PATH) as conn:
-        return pd.read_sql_query(query, conn)
+        df = pd.read_sql_query(query, conn)
+
+    # Try to write parquet, otherwise pickle
+    meta = {"db_mtime": db_mtime, "query": query}
+    try:
+        df.to_parquet(parquet_path)
+        meta_path.write_text(json.dumps(meta), encoding="utf-8")
+    except Exception:
+        try:
+            df.to_pickle(pkl_path)
+            meta_path.write_text(json.dumps(meta), encoding="utf-8")
+        except Exception:
+            pass
+
+    return df
 
 
 @st.cache_data
@@ -49,6 +99,22 @@ def load_summary() -> dict:
 def load_csv(name: str) -> pd.DataFrame:
     path = EXPORTS / name
     return pd.read_csv(path) if path.exists() else pd.DataFrame()
+
+
+def top_n_slider(label: str, total_count: int, default_value: int = 10, max_value: int = 20) -> int:
+    if total_count <= 1:
+        return total_count
+
+    slider_max = min(max_value, total_count)
+    slider_default = min(default_value, slider_max)
+    return st.slider(label, 1, slider_max, slider_default)
+
+
+def _safe_plot(fig):
+    try:
+        st.plotly_chart(fig, use_container_width=True)
+    except Exception:
+        st.write("(Unable to render chart for this dataset slice)")
 
 
 # ── queries ────────────────────────────────────────────────────────────────────
@@ -168,6 +234,19 @@ if page == "Overview":
     col4.metric("Linked Records", f"{linked:,}")
 
     st.markdown("---")
+    # Year-over-year KPI and two-column overview charts
+    yoy_col1, yoy_col2, yoy_col3 = st.columns(3)
+    try:
+        py = patents_per_year_df.sort_values("year")
+        latest_year = int(py["year"].dropna().astype(int).iloc[-1])
+        latest_count = int(py[py["year"] == latest_year]["patent_count"].iloc[0])
+        prev_count = int(py[py["year"] == (latest_year - 1)]["patent_count"].iloc[0]) if (latest_year - 1) in py["year"].values else None
+        delta_pct = None
+        if prev_count and prev_count > 0:
+            delta_pct = round(((latest_count - prev_count) / prev_count) * 100, 2)
+        yoy_col1.metric("Patents (Latest year)", f"{latest_count:,}", f"{delta_pct}% vs prev year" if delta_pct is not None else "")
+    except Exception:
+        yoy_col1.metric("Patents (Latest year)", "N/A")
 
     col_left, col_right = st.columns(2)
 
@@ -183,7 +262,7 @@ if page == "Overview":
             )
             fig_pie.update_traces(textinfo="percent+label")
             fig_pie.update_layout(showlegend=False, margin=dict(t=10, b=10))
-            st.plotly_chart(fig_pie, use_container_width=True)
+            _safe_plot(fig_pie)
         else:
             st.info("No classification data.")
 
@@ -198,9 +277,25 @@ if page == "Overview":
                 color_discrete_sequence=["#2563eb"],
             )
             fig_year.update_layout(margin=dict(t=10, b=10))
-            st.plotly_chart(fig_year, use_container_width=True)
+            _safe_plot(fig_year)
         else:
             st.info("No year data.")
+
+    st.markdown("---")
+    st.subheader("Top Companies Snapshot")
+    if not top_companies_df.empty:
+        try:
+            treemap = px.treemap(
+                top_companies_df.head(50),
+                path=[px.Constant("Companies"), "name"],
+                values="patent_count",
+                title="Top Companies (by patent count)",
+            )
+            _safe_plot(treemap)
+        except Exception:
+            st.info("Treemap cannot be rendered for this dataset slice.")
+    else:
+        st.info("No company patent stats available yet.")
 
     st.markdown("---")
     st.subheader("Pipeline Architecture")
@@ -230,7 +325,7 @@ elif page == "Top Inventors":
     if top_inventors_df.empty:
         st.warning("No inventor–patent links found in the relationships table.")
     else:
-        n = st.slider("Show top N inventors", 5, min(20, len(top_inventors_df)), min(10, len(top_inventors_df)))
+        n = top_n_slider("Show top N inventors", len(top_inventors_df))
         df_top = top_inventors_df.head(n)
 
         fig = px.bar(
@@ -244,12 +339,12 @@ elif page == "Top Inventors":
             title=f"Top {n} Inventors by Patent Count",
         )
         fig.update_layout(yaxis={"categoryorder": "total ascending"}, coloraxis_showscale=False)
-        st.plotly_chart(fig, use_container_width=True)
+        _safe_plot(fig)
 
         st.subheader("Inventor Ranking (Q7 — Window Function)")
         st.dataframe(
             inventor_ranking_df[["inventor_rank", "name", "country", "patent_count"]],
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
         )
 
@@ -259,7 +354,7 @@ elif page == "Top Inventors":
     if search:
         inv_display = inv_display[inv_display["name"].str.contains(search, case=False, na=False)]
     st.dataframe(inv_display[["name", "country"]].rename(columns={"name": "Name", "country": "Country"}),
-                 use_container_width=True, hide_index=True)
+                 width='stretch', hide_index=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TOP COMPANIES
@@ -271,7 +366,7 @@ elif page == "Top Companies":
     if top_companies_df.empty:
         st.warning("No company–patent links found in the relationships table.")
     else:
-        n = st.slider("Show top N companies", 5, min(20, len(top_companies_df)), min(10, len(top_companies_df)))
+        n = top_n_slider("Show top N companies", len(top_companies_df))
         df_top = top_companies_df.head(n)
 
         fig = px.bar(
@@ -285,12 +380,12 @@ elif page == "Top Companies":
             title=f"Top {n} Companies by Patent Count",
         )
         fig.update_layout(yaxis={"categoryorder": "total ascending"}, coloraxis_showscale=False)
-        st.plotly_chart(fig, use_container_width=True)
+        _safe_plot(fig)
 
         st.subheader("Data Table")
         st.dataframe(
             df_top[["name", "patent_count"]].rename(columns={"name": "Company", "patent_count": "Patents"}),
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
         )
 
@@ -319,7 +414,7 @@ elif page == "Countries":
                 title="Top Countries by Patent Count",
             )
             fig_bar.update_layout(coloraxis_showscale=False)
-            st.plotly_chart(fig_bar, use_container_width=True)
+            _safe_plot(fig_bar)
 
         with col_b:
             fig_map = px.choropleth(
@@ -331,21 +426,21 @@ elif page == "Countries":
                 title="Patent Density by Country",
             )
             fig_map.update_layout(margin=dict(t=40, b=10))
-            st.plotly_chart(fig_map, use_container_width=True)
+            _safe_plot(fig_map)
 
         st.subheader("Country Share (Q6 — CTE Query)")
         st.dataframe(
             country_share_df.rename(columns={
                 "country": "Country", "patent_count": "Patents", "share_pct": "Share (%)"
             }),
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
         )
 
     with st.expander("Country distribution across all inventors"):
         country_counts = inventors_df["country"].value_counts(dropna=False).reset_index()
         country_counts.columns = ["country", "inventor_count"]
-        st.dataframe(country_counts.head(30), use_container_width=True, hide_index=True)
+        st.dataframe(country_counts.head(30), width='stretch', hide_index=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TRENDS
@@ -373,12 +468,12 @@ elif page == "Trends":
             yaxis_title="Number of Patents",
             hovermode="x unified",
         )
-        st.plotly_chart(fig_line, use_container_width=True)
+        _safe_plot(fig_line)
 
         st.subheader("Data Table")
         st.dataframe(
             patents_per_year_df.rename(columns={"year": "Year", "patent_count": "Patents"}),
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
         )
 
@@ -402,7 +497,7 @@ elif page == "Trends":
             color_discrete_map={"B1": "#22c55e", "B2": "#3b82f6"},
             title="Patent Type Distribution by Year",
         )
-        st.plotly_chart(fig_class, use_container_width=True)
+        _safe_plot(fig_class)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PATENT EXPLORER
@@ -440,7 +535,7 @@ elif page == "Patent Explorer":
             "classification": "Type",
             "filing_date": "Filing Date",
         }),
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
         height=400,
     )
@@ -459,7 +554,7 @@ elif page == "Patent Explorer":
     if join_df.empty:
         st.info("The JOIN result is empty because the relationships table has very few linked records in this dataset slice.")
     else:
-        st.dataframe(join_df, use_container_width=True, hide_index=True)
+        st.dataframe(join_df, width='stretch', hide_index=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SQL QUERIES
@@ -483,7 +578,7 @@ elif page == "SQL Queries":
             if df.empty:
                 st.info("No results — relationships table has limited linked records in this dataset.")
             else:
-                st.dataframe(df, use_container_width=True, hide_index=True)
+                st.dataframe(df, width='stretch', hide_index=True)
                 csv = df.to_csv(index=False).encode("utf-8")
                 st.download_button(
                     f"⬇ Download {label.split('—')[0].strip()}.csv",
