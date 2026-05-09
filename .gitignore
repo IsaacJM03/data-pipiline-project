@@ -14,4 +14,4 @@ data/raw/*.txt
 .DS_Store
 *.log
 outputs/cache/
-
+submission/
