@@ -30,10 +30,28 @@ st.set_page_config(
 if not DB_PATH.exists():
     with st.spinner("Building database from clean data files — this only runs once..."):
         try:
-            import sys
-            sys.path.insert(0, str(BASE))
-            from scripts.load import run_load
-            run_load()
+            import sqlite3 as _sqlite3
+
+            _schema = (BASE / "sql/schema.sql").read_text(encoding="utf-8")
+            DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+            _processed = BASE / "data" / "processed"
+            if not _processed.exists():
+                _processed = BASE / "data"
+
+            with _sqlite3.connect(DB_PATH) as _conn:
+                _conn.executescript(_schema)
+                for _table, _file in [
+                    ("patents",       "clean_patents.csv"),
+                    ("inventors",     "clean_inventors.csv"),
+                    ("companies",     "clean_companies.csv"),
+                    ("relationships", "clean_relationships.csv"),
+                ]:
+                    _csv = _processed / _file
+                    if not _csv.exists():
+                        _csv = BASE / "data" / _file
+                    _df = pd.read_csv(_csv, dtype=str)
+                    _df.to_sql(_table, _conn, if_exists="append", index=False, method="multi")
         except Exception as _exc:
             st.error(f"Could not build database: {_exc}\n\nRun `python main.py` locally first.")
             st.stop()
