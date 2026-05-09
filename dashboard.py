@@ -28,8 +28,16 @@ st.set_page_config(
 
 # ── guard ──────────────────────────────────────────────────────────────────────
 if not DB_PATH.exists():
-    st.error("Database not found. Run `python main.py` first to build the pipeline.")
-    st.stop()
+    with st.spinner("Building database from clean data files — this only runs once..."):
+        try:
+            import sys
+            sys.path.insert(0, str(BASE))
+            from scripts.load import run_load
+            run_load()
+        except Exception as _exc:
+            st.error(f"Could not build database: {_exc}\n\nRun `python main.py` locally first.")
+            st.stop()
+    st.rerun()
 
 
 # ── data loading ───────────────────────────────────────────────────────────────

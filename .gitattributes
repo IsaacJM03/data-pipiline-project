@@ -1,3 +1,2 @@
-# Git LFS disabled - databases and CSVs not large enough to warrant LFS overhead
 *.csv !text !filter !merge !diff
 *.db !text !filter !merge !diff

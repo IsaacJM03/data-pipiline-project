@@ -1,13 +1,7 @@
 __pycache__/
 *.py[cod]
-data/patent_analytics.db
-data/processed/patent_staging.db
 # Runtime pipeline artifacts
-data/patent_analytics.db
-data/processed/*.csv
-outputs/exports/*.csv
-outputs/reports/*.json
-outputs/reports/*.png
+# outputs/exports and outputs/reports are intentionally tracked
 
 # Optional local raw input dumps
 # Keep directory structure with .gitkeep only
@@ -18,7 +12,6 @@ data/raw/*.txt
 *.claude/
 .vscode/settings.json
 .DS_Store
-*.db*
 *.log
 outputs/cache/
 
