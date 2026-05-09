@@ -12,6 +12,10 @@ from typing import TYPE_CHECKING, Iterable
 from urllib.parse import urljoin, urlsplit
 import zipfile
 
+from scripts.logging_config import get_logger, log_pipeline_start, log_pipeline_end, log_stats
+
+logger = get_logger("extract")
+
 if TYPE_CHECKING:
     import pandas as pd
 
@@ -115,15 +119,23 @@ def ensure_raw_data(raw_dir: Path) -> None:
     import pandas as pd
 
     raw_dir.mkdir(parents=True, exist_ok=True)
-    if any(raw_dir.glob("*.csv")) or any(raw_dir.glob("*.tsv")):
+    logger.info(f"[Raw Data] Created raw data directory: {raw_dir}")
+    
+    existing_files = list(raw_dir.glob("*.csv")) + list(raw_dir.glob("*.tsv"))
+    if existing_files:
+        logger.info(f"[Raw Data] Found {len(existing_files)} existing raw files, skipping download")
         return
 
+    logger.info("[Raw Data] No existing raw files found, attempting PatentsView download...")
     auto_download = os.getenv(PATENTSVIEW_AUTO_DOWNLOAD_ENV, "1").lower() not in {"0", "false", "no"}
     if auto_download and pull_patentsview_data(raw_dir):
+        logger.info("[Raw Data] Successfully downloaded PatentsView data")
         return
 
+    logger.warning("[Raw Data] PatentsView download failed, using sample data instead")
     sample_file = raw_dir / "sample_patents.csv"
     pd.DataFrame(SAMPLE_DATA).to_csv(sample_file, index=False)
+    logger.info(f"[Raw Data] Created sample dataset: {sample_file}")
 
 
 def list_raw_files(raw_dir: Path) -> Iterable[Path]:
@@ -229,21 +241,30 @@ def pull_patentsview_data(raw_dir: Path) -> bool:
     max_files = max(1, max_files)
 
     try:
+        logger.info(f"[Download] Discovering PatentsView files (max {max_files})...")
         links = discover_patentsview_file_links(PATENTSVIEW_DATASET_URL)
         if not links:
+            logger.warning("[Download] No PatentsView links discovered")
             return False
 
+        logger.info(f"[Download] Found {len(links)} available files, selecting {min(len(links), max_files)}")
         selected_links = links if max_files <= 0 else links[:max_files]
-        for file_url in selected_links:
+        for idx, file_url in enumerate(selected_links, 1):
             file_name = Path(urlsplit(file_url).path).name
             target = raw_dir / file_name
+            logger.info(f"[Download] Downloading file {idx}/{len(selected_links)}: {file_name}")
             download_url_to_path(file_url, target)
+        logger.info("[Download] Extracting ZIP archives...")
         unpack_zip_files(raw_dir)
+        logger.info("[Download] ZIP extraction complete")
     except Exception as exc:
-        print(f"Warning: Failed to pull PatentsView data from source ({exc}). Falling back to sample data.")
+        logger.error(f"[Download] Failed to pull PatentsView data: {exc}")
         return False
 
-    return any(raw_dir.glob("*.csv")) or any(raw_dir.glob("*.tsv")) or any(raw_dir.glob("*.txt"))
+    success = any(raw_dir.glob("*.csv")) or any(raw_dir.glob("*.tsv")) or any(raw_dir.glob("*.txt"))
+    if success:
+        logger.info("[Download] PatentsView data download successful")
+    return success
 
 
 def extract_from_file(file_path: Path) -> pd.DataFrame:
@@ -251,19 +272,26 @@ def extract_from_file(file_path: Path) -> pd.DataFrame:
     import pandas as pd
 
     sep = detect_separator(file_path)
+    logger.debug(f"[File Read] Reading {file_path.name} with separator: {repr(sep)}")
+    
     try:
         # Try standard read first
         raw_df = pd.read_csv(file_path, sep=sep, dtype=str)
+        logger.debug(f"[File Read] Successfully parsed {file_path.name}")
     except pd.errors.ParserError:
         # If parsing fails, skip problematic lines
-        print(f"⚠️  Parsing error in {file_path.name}, skipping malformed rows...")
+        logger.warning(f"[File Read] Parsing error in {file_path.name}, skipping malformed rows")
         raw_df = pd.read_csv(file_path, sep=sep, dtype=str, on_bad_lines='skip', engine='python')
+        logger.info(f"[File Read] Recovered {len(raw_df)} rows after skipping malformed lines")
     
     if len(raw_df) == 0:
+        logger.warning(f"[File Read] No valid rows extracted from {file_path.name}")
         return pd.DataFrame()  # Return empty dataframe if no rows extracted
     
+    logger.info(f"[File Read] Loaded {len(raw_df):,} rows from {file_path.name}")
     extracted_df = map_relevant_columns(raw_df)
     extracted_df["source_file"] = file_path.name
+    logger.debug(f"[Column Mapping] Mapped to {len(extracted_df.columns)} standard columns")
     return extracted_df
 
 
@@ -271,6 +299,8 @@ def run_extraction(raw_dir: Path = DEFAULT_RAW_DIR, output_file: Path = DEFAULT_
     """Run extraction from all available raw files and persist unified extracted data."""
     import pandas as pd
 
+    log_pipeline_start("EXTRACT STAGE")
+    
     raw_dir = Path(raw_dir)
     output_file = Path(output_file)
 
@@ -278,29 +308,47 @@ def run_extraction(raw_dir: Path = DEFAULT_RAW_DIR, output_file: Path = DEFAULT_
     files = list_raw_files(raw_dir)
 
     if not files:
+        logger.error(f"No raw input files found in {raw_dir}")
         raise FileNotFoundError(f"No raw input files found in {raw_dir}.")
 
+    logger.info(f"[File Discovery] Found {len(files)} raw files to process")
+    for file in files:
+        logger.info(f"[File Discovery]   - {file.name}")
+
     extracted_frames = []
-    for path in files:
-        print(f"  Extracting {path.name}...", end=" ")
+    for idx, path in enumerate(files, 1):
+        logger.info(f"[Extraction] Processing file {idx}/{len(files)}: {path.name}")
         try:
             df = extract_from_file(path)
             if len(df) > 0:
                 extracted_frames.append(df)
-                print(f"✓ ({len(df)} rows)")
+                logger.info(f"[Extraction] ✓ {path.name}: {len(df):,} rows")
             else:
-                print("⊘ (skipped - no valid rows)")
+                logger.warning(f"[Extraction] ⊘ {path.name}: No valid rows (skipped)")
         except Exception as exc:
-            print(f"✗ ({exc})")
+            logger.error(f"[Extraction] ✗ {path.name}: {exc}")
     
     if not extracted_frames:
+        logger.error("No data could be extracted from any files")
         raise ValueError("No data could be extracted from any files.")
     
+    logger.info(f"[Data Concat] Concatenating {len(extracted_frames)} dataframes...")
     extracted = pd.concat(extracted_frames, ignore_index=True)
+    logger.info(f"[Data Concat] Total rows after concatenation: {len(extracted):,}")
+    logger.info(f"[Data Concat] Total columns: {len(extracted.columns)}")
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
     extracted.to_csv(output_file, index=False)
-    print(f"✓ Saved {len(extracted)} extracted records")
+    logger.info(f"[Output] Saved {len(extracted):,} extracted records to {output_file}")
+    
+    log_stats("EXTRACT STAGE SUMMARY", {
+        "files_processed": len(files),
+        "total_records_extracted": len(extracted),
+        "columns": len(extracted.columns),
+        "output_file": str(output_file)
+    })
+    log_pipeline_end("EXTRACT STAGE", "SUCCESS")
+    
     return output_file
 
 

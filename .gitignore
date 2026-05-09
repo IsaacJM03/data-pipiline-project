@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
-
+data/patent_analytics.db
+data/processed/patent_staging.db
 # Runtime pipeline artifacts
 data/patent_analytics.db
 data/processed/*.csv
@@ -17,8 +18,7 @@ data/raw/*.txt
 *.claude/
 .vscode/settings.json
 .DS_Store
-*.db
+*.db*
 *.log
 outputs/cache/
-data/patent_analytics.db
-data/processed/patent_staging.db
+

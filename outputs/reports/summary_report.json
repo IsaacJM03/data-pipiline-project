@@ -22,18 +22,18 @@
   ],
   "top_companies": [
     {
+      "company_id": "66ecca55-c76d-49dd-a7c5-dd3dd173f664",
+      "name": "66ecca55-c76d-49dd-a7c5-dd3dd173f664",
+      "patent_count": 1
+    },
+    {
+      "company_id": "946bba39-fc75-4e7c-9c9a-1ec947f135a4",
+      "name": "ACCENTURE GLOBAL SOLUTIONS LIMITED",
+      "patent_count": 1
+    },
+    {
       "company_id": "158ee7b5-2a4b-4032-954c-6e78968e14f1",
       "name": "AFL Telecommunications LLC",
-      "patent_count": 1
-    },
-    {
-      "company_id": "235e9418-ffba-4a1b-a9ed-464c394ce170",
-      "name": "Apple Inc.",
-      "patent_count": 1
-    },
-    {
-      "company_id": "0ddd456f-7372-48ee-98c7-42a40afd27d9",
-      "name": "Beijing Wodong Tianjun Information Technology Co., Ltd.",
       "patent_count": 1
     }
   ],
